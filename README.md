@@ -122,3 +122,9 @@ demonstração do site em `docs/demo/`.
 | `AutoCut/` | O painel: `js/analysis.js` (decisão dos cortes), `js/main.js` (interface), `jsx/host.jsx` (fala com o Premiere), `py/mouth.py` (leitura da boca com MediaPipe) |
 | `docs/` | O site publicado em GitHub Pages, com a demonstração |
 | `test/` | Testes automáticos |
+
+## Licença
+
+[MIT](LICENSE). Use, modifique e distribua à vontade, mantendo o aviso de copyright.
+
+AutoCut não é um produto da Adobe. Premiere Pro é marca da Adobe Inc.
