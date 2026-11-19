@@ -115,12 +115,23 @@ node test/make_harness.js && python3 -m http.server 8765 --directory AutoCut
 Depois abra `http://localhost:8765/_harness.html`. Esse mesmo comando também gera a
 demonstração do site em `docs/demo/`.
 
+O site é gerado nos dois idiomas a partir de um único arquivo de textos
+(`tools/site-content.js`) — edite lá e rode:
+
+```bash
+node tools/build-site.js
+```
+
+Isso reescreve `docs/index.html` (português) e `docs/en/index.html` (inglês). Não edite
+esses dois arquivos à mão: eles são sobrescritos.
+
 ## Estrutura
 
 | Pasta | O que é |
 |---|---|
 | `AutoCut/` | O painel: `js/analysis.js` (decisão dos cortes), `js/main.js` (interface), `jsx/host.jsx` (fala com o Premiere), `py/mouth.py` (leitura da boca com MediaPipe) |
-| `docs/` | O site publicado em GitHub Pages, com a demonstração |
+| `docs/` | O site publicado em GitHub Pages (gerado), com a demonstração |
+| `tools/` | Gerador do site: `site-content.js` (textos PT/EN) e `build-site.js` |
 | `test/` | Testes automáticos |
 
 ## Licença

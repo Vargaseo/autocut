@@ -3,11 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AutoCut</title>
+<title>AutoCut — troca de câmera automática para podcast</title>
 <meta name="description" content="Plugin para Adobe Premiere Pro que troca de câmera automaticamente conforme quem está falando no podcast.">
+<link rel="canonical" href="https://vargaseo.github.io/autocut/">
+<link rel="alternate" hreflang="pt-BR" href="https://vargaseo.github.io/autocut/">
+<link rel="alternate" hreflang="en" href="https://vargaseo.github.io/autocut/en/">
+<link rel="alternate" hreflang="x-default" href="https://vargaseo.github.io/autocut/">
 <meta property="og:title" content="AutoCut">
 <meta property="og:description" content="Troca de câmera automática para podcast no Premiere Pro.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://vargaseo.github.io/autocut/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232d8ceb'/><rect x='7' y='10' width='8' height='12' rx='2' fill='%23fff'/><rect x='18' y='10' width='7' height='12' rx='2' fill='%23ff9f43'/></svg>">
 <style>
   :root {
@@ -21,13 +26,11 @@
     --accent: #2d8ceb;
     --accent-soft: #1d3049;
     --orange: #ff9f43;
-    --green: #4ade80;
-    --red: #ff6b6b;
     --radius: 12px;
     --gut: 16px;
   }
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
   body {
     margin: 0;
     background: var(--bg);
@@ -45,10 +48,20 @@
   .lead { color: var(--muted); max-width: 62ch; }
 
   /* ---------- topo ---------- */
-  header { padding: 56px 0 44px; }
-  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  header { padding: 26px 0 44px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 30px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
   .brand svg { width: 30px; height: 30px; flex: none; }
   .brand span { font-weight: 650; font-size: 1.06rem; }
+  .lang {
+    display: inline-flex; align-items: center; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px; font-size: 0.8rem; font-weight: 650; flex: none;
+  }
+  .lang a, .lang span { padding: 5px 13px; border-radius: 999px; text-decoration: none; line-height: 1.2; }
+  .lang .on { background: var(--accent); color: #fff; }
+  .lang .off { color: var(--muted); }
+  .lang .off:hover, .lang .off:focus-visible { color: var(--text); background: var(--panel-2); }
+
   h1 { font-size: clamp(2.1rem, 7vw, 3.3rem); font-weight: 680; }
   h1 .hl { color: var(--accent); }
   .tagline { font-size: clamp(1rem, 2.6vw, 1.2rem); color: var(--muted); max-width: 54ch; margin: 14px 0 0; }
@@ -59,8 +72,9 @@
   }
   .btn-main { background: var(--accent); color: #fff; }
   .btn-ghost { border-color: var(--line); color: var(--text); background: var(--panel); }
+
   /* ---------- faixa de cortes ---------- */
-  .strip { margin-top: 34px; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--panel); }
+  .strip { margin: 34px 0 0; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--panel); }
   .strip svg { display: block; width: 100%; height: auto; }
   .strip figcaption { color: var(--muted); font-size: 0.82rem; margin-top: 10px; }
 
@@ -136,15 +150,18 @@
 
 <header>
   <div class="wrap">
-    <div class="brand">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2d8ceb"/><rect x="7" y="10" width="8" height="12" rx="2" fill="#fff"/><rect x="18" y="10" width="7" height="12" rx="2" fill="#ff9f43"/></svg>
-      <span>AutoCut</span>
+    <div class="topbar">
+      <div class="brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2d8ceb"/><rect x="7" y="10" width="8" height="12" rx="2" fill="#fff"/><rect x="18" y="10" width="7" height="12" rx="2" fill="#ff9f43"/></svg>
+        <span>AutoCut</span>
+      </div>
+      <nav class="lang" aria-label="Idioma">
+        <span class="on" aria-current="true">PT</span>
+        <a class="off" href="en/" hreflang="en" title="Read in English">EN</a>
+      </nav>
     </div>
     <h1>A câmera vai sozinha<br><span class="hl">para quem está falando.</span></h1>
-    <p class="tagline">
-      Painel para o Adobe Premiere Pro que escuta o podcast, descobre quem fala em cada momento
-      e corta a timeline para a câmera certa. Funciona até com um microfone só para todo mundo.
-    </p>
+    <p class="tagline">Painel para o Adobe Premiere Pro que escuta o podcast, descobre quem fala em cada momento e corta a timeline para a câmera certa. Funciona até com um microfone só para todo mundo.</p>
     <div class="cta">
       <a class="btn btn-main" href="demo/">Ver o painel funcionando</a>
       <a class="btn btn-ghost" href="https://github.com/Vargaseo/autocut">Código no GitHub</a>
@@ -208,21 +225,12 @@
       <div class="card pick">
         <span class="tag">Modo padrão</span>
         <h3>Um microfone só</h3>
-        <p>
-          Um áudio para todo mundo. O som diz <em>quando</em> alguém fala; o movimento da boca em cada
-          câmera diz <em>quem</em>. Ele mede lábios, mandíbula e queixo — e, principalmente, se esse
-          movimento está no <strong>ritmo das sílabas da voz</strong>. Quem só reage, sorri ou ri sem som
-          mexe a boca fora desse ritmo e não rouba a câmera.
-        </p>
+        <p>Um áudio para todo mundo. O som diz <em>quando</em> alguém fala; o movimento da boca em cada câmera diz <em>quem</em>. Ele mede lábios, mandíbula e queixo — e, principalmente, se esse movimento está no <strong>ritmo das sílabas da voz</strong>. Quem só reage, sorri ou ri sem som mexe a boca fora desse ritmo e não rouba a câmera.</p>
       </div>
       <div class="card">
         <span class="tag">Alternativo</span>
         <h3>Um microfone por pessoa</h3>
-        <p>
-          Cada pessoa no seu próprio canal de áudio. Ele aprende quanto da voz de cada um
-          <strong>vaza nos outros microfones</strong> e desconta isso antes de decidir — então o
-          apresentador falando alto não leva a câmera quando o convidado é quem está falando.
-        </p>
+        <p>Cada pessoa no seu próprio canal de áudio. Ele aprende quanto da voz de cada um <strong>vaza nos outros microfones</strong> e desconta isso antes de decidir — então o apresentador falando alto não leva a câmera quando o convidado é quem está falando.</p>
       </div>
     </div>
   </div>
@@ -257,9 +265,7 @@
         </tbody>
       </table>
     </div>
-    <div class="note">
-      <p><strong>Cortar para a outra pessoa</strong> é o jeito de inserir aquela reação de quem escuta no meio de um monólogo longo. <code>0</code> deixa a câmera sem limite.</p>
-    </div>
+    <div class="note"><p><strong>Cortar para a outra pessoa</strong> é o jeito de inserir aquela reação de quem escuta no meio de um monólogo longo. <code>0</code> deixa a câmera sem limite.</p></div>
   </div>
 </section>
 
@@ -321,9 +327,7 @@ cd autocut</code></pre>
       <li><strong>Não tem assinatura digital da Adobe.</strong> O instalador liga o modo do Premiere que aceita painéis sem assinatura.</li>
       <li><strong>Testado só no macOS.</strong> O painel é feito em tecnologia que roda nos dois sistemas, mas ninguém rodou no Windows ainda.</li>
     </ul>
-    <div class="note">
-      <p><strong>Em desenvolvimento.</strong> A lógica de decisão é verificada por testes automáticos, mas com áudio e vídeo simulados — ainda não foi medida em gravações reais. Trate os primeiros cortes como um rascunho e confira os marcadores vermelhos.</p>
-    </div>
+    <div class="note"><p><strong>Em desenvolvimento.</strong> A lógica de decisão é verificada por testes automáticos, mas com áudio e vídeo simulados — ainda não foi medida em gravações reais. Trate os primeiros cortes como um rascunho e confira os marcadores vermelhos.</p></div>
   </div>
 </section>
 
@@ -331,16 +335,9 @@ cd autocut</code></pre>
   <div class="wrap">
     <div class="contact">
       <h2>Falar comigo</h2>
-      <p>
-        Tem uma ideia de melhoria, achou um caso em que ele erra, ou quer fazer uma proposta
-        pelo projeto? Me escreva — respondo pessoalmente.
-      </p>
+      <p>Tem uma ideia de melhoria, achou um caso em que ele erra, ou quer fazer uma proposta pelo projeto? Me escreva — respondo pessoalmente.</p>
       <a class="mail" href="mailto:vvargaseo@gmail.com?subject=AutoCut">vvargaseo@gmail.com</a>
-      <p class="small">
-        Se for um erro de corte, ajuda muito dizer o modo usado (um microfone só ou um por pessoa)
-        e o minuto aproximado do trecho. Problemas técnicos também podem ir para as
-        <a href="https://github.com/Vargaseo/autocut/issues">issues do GitHub</a>.
-      </p>
+      <p class="small">Se for um erro de corte, ajuda muito dizer o modo usado (um microfone só ou um por pessoa) e o minuto aproximado do trecho. Problemas técnicos também podem ir para as <a href="https://github.com/Vargaseo/autocut/issues">issues do GitHub</a>.</p>
     </div>
   </div>
 </section>

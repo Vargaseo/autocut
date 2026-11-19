@@ -118,23 +118,41 @@ for (const f of ['js/analysis.js', 'js/main.js', 'css/style.css']) {
   fs.copyFileSync(path.join(dir, f), path.join(demoDir, f));
 }
 
+// O painel em si é em português; o aviso acompanha o idioma do site.
 const banner = `  <div class="demo-note">
-    <strong>Demonstração</strong> — este é o painel real do AutoCut, com uma sequência de exemplo
-    no lugar do Premiere. Analise, mexa nos ajustes e veja a prévia mudar.
-    <a href="../">Voltar ao site</a>
+    <p id="notePt">
+      <strong>Demonstração</strong> — este é o painel real do AutoCut, com uma sequência de exemplo
+      no lugar do Premiere. Analise, mexa nos ajustes e veja a prévia mudar.
+      <a href="../">Voltar ao site</a>
+    </p>
+    <p id="noteEn" hidden>
+      <strong>Demo</strong> — this is the real AutoCut panel, running on a sample sequence instead of
+      Premiere. Hit <em>Analisar áudio</em>, change the settings and watch the preview update.
+      The panel interface is in Portuguese for now.
+      <a href="../en/">Back to the site</a>
+    </p>
   </div>
 `;
 const demoCss = `
     body { max-width: 420px; margin: 0 auto; }
     .demo-note { background: #1d3049; border: 1px solid #2d8ceb; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 11px; line-height: 1.5; }
+    .demo-note p { margin: 0; }
     .demo-note a { color: #7cb9f3; }
 `;
+const demoLangScript = `<script>
+  (function () {
+    if (!/[?&]lang=en\\b/.test(location.search)) return;
+    document.documentElement.lang = 'en';
+    document.getElementById('notePt').hidden = true;
+    document.getElementById('noteEn').hidden = false;
+  })();
+</script>`;
 let demoHtml = baseHtml
   .replace('<title>AutoCut</title>', '<title>AutoCut — demonstração</title>')
   .replace('</head>', `  <style>${demoCss}  </style>\n</head>`)
   .replace('<body>', '<body>\n' + banner)
   .replace('<script src="js/main.js"></script>',
-    mocks(true) + '<script src="js/main.js"></script>\n' +
+    mocks(true) + '<script src="js/main.js"></script>\n' + demoLangScript + '\n' +
     '<script>setTimeout(function () { document.getElementById("btnRead").click(); }, 150);</script>');
 fs.writeFileSync(path.join(demoDir, 'index.html'), demoHtml);
 
