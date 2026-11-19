@@ -26,6 +26,11 @@ function pc_err(msg) {
   return pc_json({ ok: false, error: String(msg) });
 }
 
+// Erro com codigo, para o painel traduzir (veja js/i18n.js).
+function pc_errCode(code, vars, fallback) {
+  return pc_json({ ok: false, error: String(fallback || code), code: code, vars: vars || {} });
+}
+
 function pc_isLocked(track) {
   try { return track.isLocked(); } catch (e) { return false; }
 }
@@ -50,7 +55,7 @@ function pc_clipList(track) {
 function pc_getSequenceInfo() {
   try {
     var seq = app.project.activeSequence;
-    if (!seq) return pc_err('Nenhuma sequencia ativa. Abra a sequencia do podcast na timeline.');
+    if (!seq) return pc_errCode('err.noSeq', {}, 'No active sequence.');
     var tb = parseFloat(seq.timebase);
     var info = {
       ok: true,
@@ -130,22 +135,22 @@ function pc_applyCuts(payloadStr) {
   try {
     var p = eval('(' + payloadStr + ')');
     var seq = app.project.activeSequence;
-    if (!seq) return pc_err('Nenhuma sequencia ativa.');
+    if (!seq) return pc_errCode('err.noSeq', {}, 'No active sequence.');
     var i, ti, ci;
 
     for (ti = 0; ti < p.tracks.length; ti++) {
-      if (p.tracks[ti] >= seq.videoTracks.numTracks) return pc_err('A faixa V' + (p.tracks[ti] + 1) + ' nao existe nesta sequencia.');
-      if (pc_isLocked(seq.videoTracks[p.tracks[ti]])) return pc_err('A faixa V' + (p.tracks[ti] + 1) + ' esta travada (cadeado). Destrave e tente de novo.');
+      if (p.tracks[ti] >= seq.videoTracks.numTracks) return pc_errCode('err.trackMissing', { n: p.tracks[ti] + 1 }, 'Track V' + (p.tracks[ti] + 1) + ' does not exist.');
+      if (pc_isLocked(seq.videoTracks[p.tracks[ti]])) return pc_errCode('err.trackLocked', { n: p.tracks[ti] + 1 }, 'Track V' + (p.tracks[ti] + 1) + ' is locked.');
     }
 
     if (p.clone) {
       seq = pc_cloneAndOpen(seq, p.cloneName);
-      if (!seq) return pc_err('Nao consegui duplicar e abrir a sequencia. Desmarque "Duplicar sequencia" ou duplique manualmente.');
+      if (!seq) return pc_errCode('err.cloneFailed', {}, 'Could not duplicate and open the sequence.');
     }
 
     app.enableQE();
     var qeSeq = qe.project.getActiveSequence();
-    if (!qeSeq) return pc_err('QE: sequencia ativa nao encontrada.');
+    if (!qeSeq) return pc_errCode('err.qe', {}, 'QE: active sequence not found.');
 
     var tb = parseFloat(seq.timebase);
     var settings = seq.getSettings();
@@ -167,7 +172,7 @@ function pc_applyCuts(payloadStr) {
           } else {
             qt.razor(pc_timecode(ticks, settings));
             if (pc_hasBoundaryAt(track, ticks, tb / 2)) offset = 0;
-            else return pc_err('O corte automatico (razor) nao funcionou nesta versao do Premiere.');
+            else return pc_errCode('err.razor', {}, 'The automatic razor did not work in this Premiere version.');
           }
         } else {
           qt.razor(pc_timecode(ticks + offset, settings));

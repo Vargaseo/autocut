@@ -2,17 +2,20 @@
   'use strict';
 
   const $ = (id) => document.getElementById(id);
+  const I18N = window.AutoCutI18n;
+  const t = (k, v) => I18N.t(k, v);
   const COLORS = ['#4f9dff', '#ff9f43', '#2ecc71', '#e056fd', '#f6e58d', '#22d3ee', '#ff6b81', '#a3e635'];
   const WIDE_COLOR = '#8a8f98';
   const HOP = 0.05;
   const SETTINGS_KEY = 'autocut.settings.v1';
-  const SETTING_IDS = ['mode', 'sens', 'minShot', 'preRoll', 'wideOverlap', 'overlapMin',
+  const SETTING_IDS = ['lang', 'mode', 'sens', 'minShot', 'preRoll', 'wideOverlap', 'overlapMin',
     'overlapDb', 'switchSec', 'mouthFps', 'syncWeight', 'mouthMin', 'mouthOverlap', 'ffmpegPath', 'clone', 'markDoubts'];
   const PARALLEL_CAMERAS = 3;   // cameras lidas ao mesmo tempo no modo "um mic so"
   const MAX_DEFAULT = { max: 20, to: 'auto', len: 2 };
   const WIDE_MAX_DEFAULT = { max: 6, to: 'auto', len: 0 };
   // ajustes que exigem reler os arquivos (os outros so recalculam a previa)
   const REANALYZE_IDS = ['mode', 'mouthFps', 'ffmpegPath'];
+  // trocar de idioma so redesenha os textos; nao precisa reanalisar
 
   let analysis = null;
   let nodeRequire = null;
@@ -41,7 +44,7 @@
   function evalHost(code) {
     return new Promise((resolve, reject) => {
       window.__adobe_cep__.evalScript(code, (r) => {
-        if (r === 'EvalScript error.') reject(new Error('Erro ao executar o script no Premiere.'));
+        if (r === 'EvalScript error.') reject(Object.assign(new Error('EvalScript error'), { code: 'err.evalScript' }));
         else resolve(r);
       });
     });
@@ -50,13 +53,14 @@
   async function callHost(fn, arg) {
     const code = arg === undefined ? fn + '()' : fn + '(' + JSON.stringify(arg) + ')';
     const res = JSON.parse(await evalHost(code));
-    if (!res.ok) throw new Error(res.error);
+    if (!res.ok) throw Object.assign(new Error(res.error), { code: res.code, vars: res.vars });
     return res;
   }
 
   function loadSettings() {
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      if (!s.lang) s.lang = I18N.detect();
       if (s.maxCfg && typeof s.maxCfg === 'object') maxCfg = s.maxCfg;
       for (const id of SETTING_IDS) {
         if (!(id in s)) continue;
@@ -102,20 +106,22 @@
     try {
       seqInfo = await callHost('pc_getSequenceInfo');
     } catch (e) {
-      showError(e.message);
+      showError(I18N.tErr(e));
       return;
     }
-    $('seqName').textContent = 'Sequência: ' + seqInfo.name + '  ·  ' + fmtTime(seqInfo.duration) +
-      '  ·  ' + seqInfo.videoTracks.length + ' vídeo / ' + seqInfo.audioTracks.length + ' áudio';
+    $('seqName').textContent = t('msg.seq', {
+      name: seqInfo.name, dur: fmtTime(seqInfo.duration),
+      v: seqInfo.videoTracks.length, a: seqInfo.audioTracks.length
+    });
 
     const withAudio = seqInfo.audioTracks.filter((t) => t.clips.length > 0);
     const withVideo = seqInfo.videoTracks.filter((t) => t.clips.length > 0);
-    if (!withAudio.length) { showError('Nenhuma faixa de áudio com clipes nesta sequência.'); return; }
+    if (!withAudio.length) { showError(t('err.noAudioTrack')); return; }
 
     $('selAudio').innerHTML = withAudio.map((t) =>
       `<option value="${t.index}">A${t.index + 1} · ${escapeHtml(t.clips[0].name)}</option>`).join('');
 
-    $('selWide').innerHTML = '<option value="-1">Nenhuma</option>' + seqInfo.videoTracks.map((v) =>
+    $('selWide').innerHTML = `<option value="-1">${escapeHtml(t('wide.none'))}</option>` + seqInfo.videoTracks.map((v) =>
       `<option value="${v.index}">V${v.index + 1}${v.firstClip ? ' · ' + escapeHtml(v.firstClip) : ''}</option>`).join('');
 
     // palpite: se ha mais cameras que pessoas, a ultima e a aberta
@@ -135,16 +141,15 @@
     const m = mode();
     $('rowAudio').classList.toggle('hidden', m !== 'mouth');
     if (m === 'mics') {
-      $('hintMode').textContent = 'Cada microfone (faixa de áudio) aponta para a câmera (faixa de vídeo) daquela pessoa.';
-      rows = seqInfo.audioTracks.filter((t) => t.clips.length > 0).map((t, i) => ({
-        audioIndex: t.index, clips: t.clips, enabled: true, name: 'Pessoa ' + (i + 1), channel: 'mix',
+      $('hintMode').textContent = t('hint.mics');
+      rows = seqInfo.audioTracks.filter((x) => x.clips.length > 0).map((tr, i) => ({
+        audioIndex: tr.index, clips: tr.clips, enabled: true, name: t('person.n', { n: i + 1 }), autoName: i + 1, channel: 'mix',
         videoTrack: i < seqInfo.videoTracks.length ? i : 0
       }));
     } else {
-      $('hintMode').textContent = 'O áudio diz quando alguém fala; o movimento da boca em cada câmera diz quem. ' +
-        'Cada câmera deve mostrar o rosto de uma pessoa.';
-      rows = seqInfo.videoTracks.filter((t) => t.clips.length > 0).map((t, i) => ({
-        videoTrack: t.index, clips: t.clips, enabled: true, name: 'Pessoa ' + (i + 1)
+      $('hintMode').textContent = t('hint.mouth');
+      rows = seqInfo.videoTracks.filter((x) => x.clips.length > 0).map((tr, i) => ({
+        videoTrack: tr.index, clips: tr.clips, enabled: true, name: t('person.n', { n: i + 1 }), autoName: i + 1
       }));
     }
     renderRows();
@@ -154,9 +159,10 @@
     const m = mode();
     const wide = wideTrack();
     const vOpts = seqInfo.videoTracks.map((v) => `<option value="${v.index}">V${v.index + 1}</option>`).join('');
+    const th = (k) => `<th>${escapeHtml(t(k))}</th>`;
     $('tblSpeakers').querySelector('thead').innerHTML = m === 'mics'
-      ? '<tr><th></th><th>Nome</th><th>Áudio</th><th>Canal</th><th>Câmera</th></tr>'
-      : '<tr><th></th><th>Nome</th><th>Câmera</th><th>Arquivo</th></tr>';
+      ? `<tr><th></th>${th('th.name')}${th('th.audio')}${th('th.channel')}${th('th.camera')}</tr>`
+      : `<tr><th></th>${th('th.name')}${th('th.camera')}${th('th.file')}</tr>`;
     $('tblSpeakers').querySelector('tbody').innerHTML = rows.map((r, i) => {
       const isWide = m === 'mouth' && r.videoTrack === wide;
       const sw = `<span class="swatch" style="background:${isWide ? WIDE_COLOR : COLORS[i % COLORS.length]}"></span>`;
@@ -165,12 +171,12 @@
           <td><input type="checkbox" data-k="enabled" ${r.enabled ? 'checked' : ''}>${sw}</td>
           <td><input type="text" data-k="name" value="${escapeHtml(r.name)}"></td>
           <td title="${escapeHtml(r.clips[0].name)}">A${r.audioIndex + 1}</td>
-          <td><select data-k="channel"><option value="mix">Mix</option><option value="L">Esq.</option><option value="R">Dir.</option></select></td>
+          <td><select data-k="channel"><option value="mix">${escapeHtml(t('ch.mix'))}</option><option value="L">${escapeHtml(t('ch.L'))}</option><option value="R">${escapeHtml(t('ch.R'))}</option></select></td>
           <td><select data-k="videoTrack">${vOpts}</select></td></tr>`;
       }
       return `<tr data-i="${i}">
         <td><input type="checkbox" data-k="enabled" ${r.enabled && !isWide ? 'checked' : ''} ${isWide ? 'disabled' : ''}>${sw}</td>
-        <td>${isWide ? '<span class="muted">câmera aberta</span>' : `<input type="text" data-k="name" value="${escapeHtml(r.name)}">`}</td>
+        <td>${isWide ? `<span class="muted">${escapeHtml(t('row.wideCam'))}</span>` : `<input type="text" data-k="name" value="${escapeHtml(r.name)}">`}</td>
         <td>V${r.videoTrack + 1}</td>
         <td class="muted" title="${escapeHtml(r.clips[0].name)}">${escapeHtml(r.clips[0].name.slice(0, 18))}</td></tr>`;
     }).join('');
@@ -185,7 +191,7 @@
         el.addEventListener('change', () => {
           const k = el.dataset.k;
           r[k] = el.type === 'checkbox' ? el.checked : (k === 'videoTrack' ? +el.value : el.value);
-          if (k === 'name') { renderMaxTable(); drawPreview(); return; }
+          if (k === 'name') { r.autoName = 0; renderMaxTable(); drawPreview(); return; }
           if (k === 'videoTrack' && inputs) { rerun(); return; } // so muda o destino dos cortes
           invalidate();
         });
@@ -215,12 +221,13 @@
     const people = sps.filter((r) => !seen.has(r.videoTrack) && seen.add(r.videoTrack));
     const camName = (r) => `V${r.videoTrack + 1} · ${escapeHtml(r.name)}`;
     const items = people.map((r) => ({ key: String(r.videoTrack), label: camName(r), color: COLORS[rows.indexOf(r) % COLORS.length], isWide: false }));
-    if (wide >= 0) items.push({ key: 'wide', label: `V${wide + 1} · Aberto`, color: WIDE_COLOR, isWide: true });
+    if (wide >= 0) items.push({ key: 'wide', label: `V${wide + 1} · ${escapeHtml(t('maxair.wideRow'))}`, color: WIDE_COLOR, isWide: true });
 
     tb.innerHTML = items.map((it) => {
       const c = camCfg(it.key);
-      const opts = [`<option value="auto">${it.isWide ? 'Quem estiver falando' : (wide >= 0 ? 'Automático (aberto)' : 'Automático (outra pessoa)')}</option>`];
-      if (!it.isWide && wide >= 0) opts.push('<option value="wide">Aberto</option>');
+      const autoLabel = it.isWide ? t('maxair.auto.speaker') : (wide >= 0 ? t('maxair.auto.wide') : t('maxair.auto.person'));
+      const opts = [`<option value="auto">${escapeHtml(autoLabel)}</option>`];
+      if (!it.isWide && wide >= 0) opts.push(`<option value="wide">${escapeHtml(t('maxair.wide'))}</option>`);
       for (const r of people) if (String(r.videoTrack) !== it.key) opts.push(`<option value="v${r.videoTrack}">${camName(r)}</option>`);
       return `<tr data-key="${it.key}">
         <td><span class="swatch" style="background:${it.color}"></span>${it.label}</td>
@@ -297,7 +304,7 @@
     const key = 'a|' + channel + '|' + clipsKey(clips);
     if (!cache[key]) {
       const [env] = await analysis.buildEnvelopes(ffmpeg, [{ clips, channel }], seqInfo.duration, HOP, (_, p) => {
-        $('progress').textContent = `Lendo áudio ${label}… ${Math.round(p * 100)}%`;
+        $('progress').textContent = t('msg.readingAudio', { label: label, pct: Math.round(p * 100) });
       });
       cache[key] = env;
     }
@@ -314,7 +321,7 @@
       ffmpeg: ffmpeg
     };
     if (!fs.existsSync(env.python) || !fs.existsSync(env.model)) {
-      throw new Error('O modo "áudio só" ainda não está preparado neste computador.\nRode no Terminal:  bash setup_lipsync.sh');
+      throw Object.assign(new Error('setup_lipsync.sh'), { code: 'err.noLipsync' });
     }
     return env;
   }
@@ -322,18 +329,17 @@
   async function analyze() {
     showError('');
     const ffmpeg = analysis.findFfmpeg($('ffmpegPath').value.trim());
-    if (!ffmpeg) { showError('ffmpeg não encontrado. Instale (brew install ffmpeg) ou informe o caminho em Avançado.'); return; }
+    if (!ffmpeg) { showError(t('err.noFfmpeg')); return; }
     const m = mode();
     const wide = wideTrack();
     const speakers = rows.filter((r) => r.enabled && !(m === 'mouth' && r.videoTrack === wide));
     if (m === 'mouth' ? speakers.length < 2 : !speakers.length) {
-      showError(m === 'mouth' ? 'Marque pelo menos duas câmeras de pessoas.' : 'Marque pelo menos uma pessoa.');
+      showError(t(m === 'mouth' ? 'err.pickTwo' : 'err.pickOne'));
       return;
     }
     const missing = speakers.filter((s) => !s.clips.some((c) => c.path));
     if (missing.length) {
-      showError('Não achei o arquivo de mídia de: ' + missing.map((x) => x.name).join(', ') +
-        '.\nClipes aninhados (nested) ou mesclados não são suportados — use o arquivo original na faixa.');
+      showError(t('err.noMedia', { names: missing.map((x) => x.name).join(', ') }));
       return;
     }
 
@@ -342,13 +348,14 @@
       if (m === 'mics') {
         const envs = [];
         for (let i = 0; i < speakers.length; i++) {
-          envs.push(await audioEnvelope(ffmpeg, speakers[i].clips, speakers[i].channel, `de ${speakers[i].name} (${i + 1}/${speakers.length})`));
+          envs.push(await audioEnvelope(ffmpeg, speakers[i].clips, speakers[i].channel,
+            t('msg.audioOf', { name: speakers[i].name, i: i + 1, n: speakers.length })));
         }
         inputs = { mode: m, speakers, envs };
       } else {
         const env = mouthEnv(ffmpeg);
         const aTrack = seqInfo.audioTracks.find((t) => t.index === +$('selAudio').value);
-        const audioEnv = await audioEnvelope(ffmpeg, aTrack.clips, $('selAudioCh').value, 'do podcast');
+        const audioEnv = await audioEnvelope(ffmpeg, aTrack.clips, $('selAudioCh').value, t('msg.audioPodcast'));
         const fps = num('mouthFps') || 10;
         // le varias cameras ao mesmo tempo
         const mouths = new Array(speakers.length);
@@ -358,9 +365,9 @@
           const total = prog.reduce((a, b) => a + b, 0) / prog.length;
           const el = (Date.now() - t0) / 1000;
           const eta = total > 0.02 && total < 1 ? Math.round(el / total - el) : null;
-          $('progress').textContent = 'Lendo as bocas: ' +
+          $('progress').textContent = t('msg.readingMouths') +
             speakers.map((sp, i) => `${sp.name} ${Math.round(prog[i] * 100)}%`).join(' · ') +
-            (eta !== null ? `\nfalta ~${fmtTime(eta)}` : '');
+            (eta !== null ? '\n' + t('msg.eta', { time: fmtTime(eta) }) : '');
         };
         let nextIdx = 0;
         const worker = async () => {
@@ -386,17 +393,16 @@
           return { name: speakers[i].name, pct: n / Math.max(1, o.length) };
         }).filter((x) => x.pct < 0.5);
         if (noFace.length) {
-          showError('Rosto encontrado em menos da metade do vídeo de: ' +
-            noFace.map((x) => `${x.name} (${Math.round(x.pct * 100)}%)`).join(', ') + '. Os cortes dessas câmeras podem falhar.');
+          showError(t('err.noFace', { list: noFace.map((x) => `${x.name} (${Math.round(x.pct * 100)}%)`).join(', ') }));
         }
         inputs = { mode: m, speakers, audioEnv, mouths };
       }
-      $('progress').textContent = 'Análise pronta. Ajuste os controles e veja a prévia mudar.';
+      $('progress').textContent = t('msg.ready');
       renderMaxTable();
       rerun();
       $('secApply').classList.remove('hidden');
     } catch (e) {
-      showError(e.message);
+      showError(I18N.tErr(e));
       $('progress').textContent = '';
     } finally {
       $('btnAnalyze').disabled = false;
@@ -458,12 +464,14 @@
 
     const sec = lastResult.stats.seconds;
     const items = inputs.speakers.map((sp, i) => ({ color: speakerColor(i), name: sp.name, t: sec[i] || 0 }));
-    if (sec[analysis.WIDE]) items.push({ color: WIDE_COLOR, name: 'Aberto', t: sec[analysis.WIDE] });
+    if (sec[analysis.WIDE]) items.push({ color: WIDE_COLOR, name: t('legend.wide'), t: sec[analysis.WIDE] });
     $('legend').innerHTML = items.map((it) =>
       `<span><span class="swatch" style="background:${it.color}"></span>${escapeHtml(it.name)} ${Math.round(100 * it.t / dur)}%</span>`).join('');
     const nd = (lastResult.doubts || []).length;
-    $('stats').textContent = `${lastResult.stats.cuts} cortes · média de ${(dur / Math.max(1, lastResult.segments.length)).toFixed(1)} s por plano` +
-      (nd ? `\n▼ ${nd} trecho(s) para conferir: ` + lastResult.doubts.slice(0, 6).map((d) => fmtTime(d.time)).join(', ') + (nd > 6 ? '…' : '') : '');
+    $('stats').textContent =
+      t('stats.cuts', { cuts: lastResult.stats.cuts, avg: (dur / Math.max(1, lastResult.segments.length)).toFixed(1) }) +
+      (nd ? '\n' + t('stats.doubts', { n: nd }) +
+        lastResult.doubts.slice(0, 6).map((d) => fmtTime(d.time)).join(', ') + (nd > 6 ? '…' : '') : '');
   }
 
   // ---------- 3. aplicar ----------
@@ -491,8 +499,12 @@
       segments: segs,
       markers: $('markDoubts').checked ? (lastResult.doubts || []).map((d) => ({
         t: d.time,
-        name: 'AutoCut: conferir',
-        comment: `${inputs.speakers[d.talker].name} parece falar por ${d.duration.toFixed(1)} s, mas a câmera está em ${inputs.speakers[d.onAir].name}.`
+        name: t('marker.name'),
+        comment: t('marker.comment', {
+          talker: inputs.speakers[d.talker].name,
+          dur: d.duration.toFixed(1),
+          onAir: inputs.speakers[d.onAir].name
+        })
       })) : []
     };
   }
@@ -501,31 +513,56 @@
     showError('');
     if (!lastResult) return;
     const payload = buildPayload();
-    if (payload.tracks.length < 2) { showError('Só uma câmera foi usada — confira o mapeamento das câmeras.'); return; }
+    if (payload.tracks.length < 2) { showError(t('err.oneCamera')); return; }
     $('btnApply').disabled = true;
-    $('applyMsg').textContent = `Aplicando ${payload.cutFrames.length} cortes em ${payload.tracks.length} faixas… (o Premiere pode travar alguns segundos)`;
+    $('applyMsg').textContent = t('msg.applying', { cuts: payload.cutFrames.length, tracks: payload.tracks.length });
     try {
       const res = await callHost('pc_applyCuts', JSON.stringify(payload));
-      $('applyMsg').innerHTML = `<span class="ok">Pronto!</span> Sequência "${escapeHtml(res.sequence)}": ${res.razors} cortes, ${res.toggled} clipes desativados/ativados` +
-        (res.markers ? `, ${res.markers} marcador(es) para conferir.` : '.');
+      $('applyMsg').innerHTML = `<span class="ok">${escapeHtml(t('msg.done'))}</span>` +
+        escapeHtml(t('msg.doneDetail', { seq: res.sequence, razors: res.razors, toggled: res.toggled })) +
+        (res.markers ? escapeHtml(t('msg.doneMarkers', { n: res.markers })) : '.');
     } catch (e) {
       $('applyMsg').textContent = '';
-      showError(e.message);
+      showError(I18N.tErr(e));
     } finally {
       $('btnApply').disabled = false;
+    }
+  }
+
+  // ---------- idioma ----------
+  function applyLanguage(l) {
+    I18N.setLang(l);
+    $('lang').value = I18N.getLang();
+    I18N.applyStatic(document);
+    // nomes que o painel deu (nao os que o usuario digitou) acompanham o idioma
+    for (const r of rows) if (r.autoName) r.name = t('person.n', { n: r.autoName });
+    if (seqInfo) {
+      $('seqName').textContent = t('msg.seq', {
+        name: seqInfo.name, dur: fmtTime(seqInfo.duration),
+        v: seqInfo.videoTracks.length, a: seqInfo.audioTracks.length
+      });
+      const wideSel = $('selWide');
+      const keep = wideSel.value;
+      wideSel.querySelector('option[value="-1"]').textContent = t('wide.none');
+      wideSel.value = keep;
+      $('hintMode').textContent = t(mode() === 'mics' ? 'hint.mics' : 'hint.mouth');
+      renderRows();
+      renderMaxTable();
+      drawPreview();
     }
   }
 
   // ---------- inicio ----------
   function init() {
     loadSettings();
+    applyLanguage($('lang').value || I18N.detect());
     $('vSens').textContent = $('sens').value;
     try {
       nodeRequire = typeof require === 'function' ? require : (window.cep_node && window.cep_node.require);
       extPath = extensionPath();
       analysis = nodeRequire(extPath + '/js/analysis.js');
     } catch (e) {
-      showError('Não consegui carregar o Node.js do painel: ' + e.message);
+      showError(t('err.node', { msg: e.message }));
       return;
     }
     $('btnRead').addEventListener('click', readSequence);
@@ -540,7 +577,10 @@
       const handler = () => {
         if (id === 'sens') $('vSens').textContent = $('sens').value;
         saveSettings();
-        if (id === 'mode') { buildRows(); invalidate(); } else if (REANALYZE_IDS.includes(id)) invalidate(); else rerun();
+        if (id === 'lang') applyLanguage($('lang').value);
+        else if (id === 'mode') { buildRows(); invalidate(); }
+        else if (REANALYZE_IDS.includes(id)) invalidate();
+        else rerun();
       };
       $(id).addEventListener($(id).tagName === 'SELECT' || $(id).type === 'checkbox' ? 'change' : 'input', handler);
     }

@@ -16,6 +16,11 @@ body {
   font: 12px/1.4 -apple-system, "Segoe UI", sans-serif;
 }
 header { margin-bottom: 10px; }
+.titlebar { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.langsel {
+  flex: none; background: #1b1b1b; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 4px; padding: 2px 4px; font-size: 11px;
+}
 h1 { font-size: 15px; margin: 0; }
 h2 { font-size: 12px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .sub, .muted, .hint { color: var(--muted); }

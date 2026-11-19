@@ -114,7 +114,7 @@ fs.writeFileSync(path.join(dir, '_harness.html'),
 const demoDir = path.join(root, 'docs', 'demo');
 fs.mkdirSync(path.join(demoDir, 'js'), { recursive: true });
 fs.mkdirSync(path.join(demoDir, 'css'), { recursive: true });
-for (const f of ['js/analysis.js', 'js/main.js', 'css/style.css']) {
+for (const f of ['js/analysis.js', 'js/main.js', 'js/i18n.js', 'css/style.css']) {
   fs.copyFileSync(path.join(dir, f), path.join(demoDir, f));
 }
 
@@ -127,8 +127,8 @@ const banner = `  <div class="demo-note">
     </p>
     <p id="noteEn" hidden>
       <strong>Demo</strong> — this is the real AutoCut panel, running on a sample sequence instead of
-      Premiere. Hit <em>Analisar áudio</em>, change the settings and watch the preview update.
-      The panel interface is in Portuguese for now.
+      Premiere. Hit <em>Analyse audio</em>, change the settings and watch the preview update.
+      The PT/EN switch in the top-right corner changes the panel’s language.
       <a href="../en/">Back to the site</a>
     </p>
   </div>
@@ -139,20 +139,22 @@ const demoCss = `
     .demo-note p { margin: 0; }
     .demo-note a { color: #7cb9f3; }
 `;
+// A demo sempre segue o idioma do link que trouxe o visitante, e nao o que ficou salvo antes.
 const demoLangScript = `<script>
   (function () {
-    if (!/[?&]lang=en\\b/.test(location.search)) return;
-    document.documentElement.lang = 'en';
-    document.getElementById('notePt').hidden = true;
-    document.getElementById('noteEn').hidden = false;
+    var en = /[?&]lang=en\\b/.test(location.search);
+    document.getElementById('notePt').hidden = en;
+    document.getElementById('noteEn').hidden = !en;
+    try { localStorage.setItem('autocut.settings.v1', JSON.stringify({ lang: en ? 'en' : 'pt' })); } catch (e) {}
   })();
 </script>`;
 let demoHtml = baseHtml
   .replace('<title>AutoCut</title>', '<title>AutoCut — demonstração</title>')
   .replace('</head>', `  <style>${demoCss}  </style>\n</head>`)
   .replace('<body>', '<body>\n' + banner)
+  // o idioma precisa ser escolhido ANTES do main.js, que le o ajuste salvo ao iniciar
   .replace('<script src="js/main.js"></script>',
-    mocks(true) + '<script src="js/main.js"></script>\n' + demoLangScript + '\n' +
+    mocks(true) + demoLangScript + '\n<script src="js/main.js"></script>\n' +
     '<script>setTimeout(function () { document.getElementById("btnRead").click(); }, 150);</script>');
 fs.writeFileSync(path.join(demoDir, 'index.html'), demoHtml);
 

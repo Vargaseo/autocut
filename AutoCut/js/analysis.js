@@ -10,6 +10,14 @@ const NONE = -1;          // ninguem falando
 const OVERLAP = -2;       // duas ou mais pessoas falando juntas
 const WIDE = -3;          // plano aberto
 
+// Erro com codigo, para o painel traduzir (veja js/i18n.js).
+function err(code, vars, fallback) {
+  const e = new Error(fallback || code);
+  e.code = code;
+  e.vars = vars || {};
+  return e;
+}
+
 function findFfmpeg(custom) {
   const list = [
     custom,
@@ -46,7 +54,7 @@ function extractEnvelope(ffmpeg, file, startSec, durSec, hop, channel, onProgres
       '-i', file, '-vn', '-map', '0:a:0'].concat(channelArgs(channel),
       ['-ar', String(SR), '-acodec', 'pcm_s16le', '-f', 's16le', 'pipe:1']);
     const proc = cp.spawn(ffmpeg, args);
-    let frame = 0, acc = 0, cnt = 0, leftover = null, err = '', lastP = 0;
+    let frame = 0, acc = 0, cnt = 0, leftover = null, errTxt = '', lastP = 0;
     proc.stdout.on('data', (buf) => {
       if (leftover) { buf = Buffer.concat([leftover, buf]); leftover = null; }
       const n = buf.length >> 1;
@@ -64,12 +72,13 @@ function extractEnvelope(ffmpeg, file, startSec, durSec, hop, channel, onProgres
         if (p - lastP > 0.01) { lastP = p; onProgress(p); }
       }
     });
-    proc.stderr.on('data', (d) => { err += d; });
+    proc.stderr.on('data', (d) => { errTxt += d; });
     proc.on('error', reject);
     proc.on('close', (code) => {
       if (cnt > 0 && frame < nFrames) out[frame] = toDb(acc / cnt);
       if (code !== 0 && frame === 0) {
-        reject(new Error('ffmpeg nao conseguiu ler "' + file + '": ' + err.trim().slice(0, 300)));
+        reject(err('err.ffmpegRead', { file: file, msg: errTxt.trim().slice(0, 300) },
+          'ffmpeg could not read "' + file + '": ' + errTxt.trim().slice(0, 300)));
       } else {
         resolve(out);
       }
@@ -245,10 +254,21 @@ function extractMouth(python, script, model, ffmpeg, file, startSec, durSec, fps
         else if (ln.trim()) errTail = (errTail + '\n' + ln).slice(-600);
       }
     });
-    proc.on('error', (e) => reject(new Error('Nao consegui rodar o Python do modo audio unico (' + e.message + '). Rode setup_lipsync.sh.')));
+    proc.on('error', (e) => reject(err('err.python', { msg: e.message },
+      'Could not run Python for the single-microphone mode (' + e.message + '). Run setup_lipsync.sh.')));
     proc.on('close', (code) => {
-      if (code !== 0) return reject(new Error('Leitura da boca falhou: ' + (errMsg || ('"' + file + '"' + errTail))));
-      try { resolve(JSON.parse(out)); } catch (e) { reject(new Error('Resposta invalida do leitor de boca: ' + e.message)); }
+      if (code !== 0) {
+        // o mouth.py manda "ERRO <codigo>|<arquivo>|<detalhe>"
+        const parts = (errMsg || '').split('|');
+        if (parts.length >= 2 && /^err\./.test(parts[0])) {
+          return reject(err(parts[0], { file: parts[1], msg: parts[2] || '' }, errMsg));
+        }
+        return reject(err('err.mouthFailed', { msg: errMsg || ('"' + file + '"' + errTail) },
+          'Mouth reading failed: ' + (errMsg || ('"' + file + '"' + errTail))));
+      }
+      try { resolve(JSON.parse(out)); } catch (e) {
+        reject(err('err.mouthBadJson', { msg: e.message }, 'Invalid answer from the mouth reader: ' + e.message));
+      }
     });
   });
 }

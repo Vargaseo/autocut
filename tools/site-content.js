@@ -31,7 +31,8 @@ const pt = {
     cards: [
       { tag: 'Corta', h: 'Troca por quem fala', p: 'Cada pessoa tem a sua câmera. O AutoCut corta para ela quando começa a falar — e antecipa um pouco o corte, como um editor faria.' },
       { tag: 'Respira', h: 'Usa o plano aberto', p: 'Quando duas pessoas falam juntas, ou quando um close já está demorando, ele vai para a câmera aberta.' },
-      { tag: 'Avisa', h: 'Marca o que está em dúvida', p: 'Se alguém parece falar com a câmera em outra pessoa, ele deixa um marcador vermelho na sequência para você conferir só aquele ponto.' }
+      { tag: 'Avisa', h: 'Marca o que está em dúvida', p: 'Se alguém parece falar com a câmera em outra pessoa, ele deixa um marcador vermelho na sequência para você conferir só aquele ponto.' },
+      { tag: 'Fala a sua língua', h: 'Português e inglês', p: 'O painel inteiro troca de idioma num seletor no canto, inclusive as mensagens de erro e os marcadores que ele deixa na sequência.' }
     ]
   },
   s2: {
@@ -135,7 +136,8 @@ const en = {
     cards: [
       { tag: 'Cuts', h: 'Switches to the speaker', p: 'Each person has their own camera. AutoCut cuts to them when they start talking — and lands the cut slightly early, the way an editor would.' },
       { tag: 'Breathes', h: 'Uses the wide shot', p: 'When two people talk over each other, or when a close-up has been held too long, it goes to the wide camera.' },
-      { tag: 'Flags', h: 'Marks what it is unsure about', p: 'If someone seems to be talking while the camera is on another person, it leaves a red marker on the sequence so you only review that spot.' }
+      { tag: 'Flags', h: 'Marks what it is unsure about', p: 'If someone seems to be talking while the camera is on another person, it leaves a red marker on the sequence so you only review that spot.' },
+      { tag: 'Speaks your language', h: 'English and Portuguese', p: 'The whole panel switches language from a selector in the corner — error messages and the markers it leaves on the sequence included.' }
     ]
   },
   s2: {

@@ -7,26 +7,36 @@
 </head>
 <body>
   <header>
-    <h1>AutoCut</h1>
-    <span class="sub">Troca de câmera automática por quem fala</span>
+    <div class="titlebar">
+      <div>
+        <h1>AutoCut</h1>
+        <span class="sub" data-i18n="app.sub"></span>
+      </div>
+      <select id="lang" class="langsel" aria-label="Idioma / Language">
+        <option value="pt">PT</option>
+        <option value="en">EN</option>
+      </select>
+    </div>
   </header>
 
   <section>
-    <button id="btnRead" class="primary">1. Ler sequência ativa</button>
+    <button id="btnRead" class="primary" data-i18n="btn.read"></button>
     <div id="seqName" class="muted"></div>
   </section>
 
   <section id="secSpeakers" class="hidden">
-    <h2>Pessoas</h2>
-    <label class="row">Gravação
+    <h2 data-i18n="people.title"></h2>
+    <label class="row"><span data-i18n="people.recording"></span>
       <select id="mode">
-        <option value="mouth">Um microfone só (leitura da boca)</option>
-        <option value="mics">Um microfone por pessoa</option>
+        <option value="mouth" data-i18n="mode.mouth"></option>
+        <option value="mics" data-i18n="mode.mics"></option>
       </select>
     </label>
-    <label class="row hidden" id="rowAudio">Áudio do podcast
+    <label class="row hidden" id="rowAudio"><span data-i18n="people.audio"></span>
       <span><select id="selAudio"></select> <select id="selAudioCh">
-        <option value="mix">Mix</option><option value="L">Esq.</option><option value="R">Dir.</option>
+        <option value="mix" data-i18n="ch.mix"></option>
+        <option value="L" data-i18n="ch.L"></option>
+        <option value="R" data-i18n="ch.R"></option>
       </select></span>
     </label>
     <p class="hint" id="hintMode"></p>
@@ -34,60 +44,65 @@
       <thead></thead>
       <tbody></tbody>
     </table>
-    <label class="row">Câmera aberta (wide)
+    <label class="row"><span data-i18n="people.wide"></span>
       <select id="selWide"></select>
     </label>
   </section>
 
   <section id="secSettings" class="hidden">
-    <h2>Ajustes</h2>
-    <label class="row">Sensibilidade <span id="vSens"></span>
+    <h2 data-i18n="settings.title"></h2>
+    <label class="row"><span data-i18n="set.sens"></span> <span id="vSens"></span>
       <input type="range" id="sens" min="0" max="100" value="50">
     </label>
-    <label class="row">Duração mínima do plano (s)
+    <label class="row"><span data-i18n="set.minShot"></span>
       <input type="number" id="minShot" min="0.5" max="20" step="0.1" value="2.5">
     </label>
-    <label class="row">Antecipar o corte (s)
+    <label class="row"><span data-i18n="set.preRoll"></span>
       <input type="number" id="preRoll" min="0" max="2" step="0.05" value="0.25">
     </label>
-    <label class="row check"><input type="checkbox" id="wideOverlap" checked> Plano aberto quando falam juntos</label>
-    <label class="row indent">…se durar pelo menos (s)
+    <label class="row check"><input type="checkbox" id="wideOverlap" checked> <span data-i18n="set.wideOverlap"></span></label>
+    <label class="row indent"><span data-i18n="set.overlapMin"></span>
       <input type="number" id="overlapMin" min="0.3" max="10" step="0.1" value="1.5">
     </label>
-    <h2 class="sub2">Tempo máximo no ar</h2>
-    <p class="hint">Quando uma câmera passa do máximo, o plugin procura uma pausa na fala e corta para outra câmera por alguns segundos. 0 = sem limite.</p>
+    <h2 class="sub2" data-i18n="maxair.title"></h2>
+    <p class="hint" data-i18n="maxair.hint"></p>
     <table id="tblMax">
-      <thead><tr><th>Câmera</th><th>Máx. (s)</th><th>Depois corta para</th><th>Por (s)</th></tr></thead>
+      <thead><tr>
+        <th data-i18n="maxair.th.cam"></th>
+        <th data-i18n="maxair.th.max"></th>
+        <th data-i18n="maxair.th.to"></th>
+        <th data-i18n="maxair.th.len"></th>
+      </tr></thead>
       <tbody></tbody>
     </table>
     <details>
-      <summary>Avançado</summary>
-      <label class="row">Evidência para trocar de câmera (s)
+      <summary data-i18n="adv.title"></summary>
+      <label class="row"><span data-i18n="adv.switchSec"></span>
         <input type="number" id="switchSec" min="0.1" max="3" step="0.05" value="0.4">
       </label>
-      <label class="row">Diferença p/ considerar fala simultânea (dB)
+      <label class="row"><span data-i18n="adv.overlapDb"></span>
         <input type="number" id="overlapDb" min="1" max="20" step="0.5" value="6">
       </label>
-      <label class="row">Leitura da boca: quadros por segundo
+      <label class="row"><span data-i18n="adv.mouthFps"></span>
         <input type="number" id="mouthFps" min="4" max="30" step="1" value="10">
       </label>
-      <label class="row">Leitura da boca: peso da sincronia boca-voz <small>0 = desligado</small>
+      <label class="row"><span data-i18n="adv.syncWeight"></span> <small data-i18n="adv.syncOff"></small>
         <input type="number" id="syncWeight" min="0" max="1" step="0.05" value="0.7">
       </label>
-      <label class="row">Leitura da boca: movimento mínimo
+      <label class="row"><span data-i18n="adv.mouthMin"></span>
         <input type="number" id="mouthMin" min="0.05" max="1" step="0.05" value="0.35">
       </label>
-      <label class="row">Leitura da boca: semelhança p/ fala simultânea
+      <label class="row"><span data-i18n="adv.mouthOverlap"></span>
         <input type="number" id="mouthOverlap" min="0.3" max="1" step="0.05" value="0.6">
       </label>
-      <label class="row">Caminho do ffmpeg
-        <input type="text" id="ffmpegPath" placeholder="detectar automaticamente">
+      <label class="row"><span data-i18n="adv.ffmpeg"></span>
+        <input type="text" id="ffmpegPath" data-i18n-ph="adv.ffmpegAuto">
       </label>
     </details>
   </section>
 
   <section id="secRun" class="hidden">
-    <button id="btnAnalyze" class="primary">2. Analisar áudio</button>
+    <button id="btnAnalyze" class="primary" data-i18n="btn.analyze"></button>
     <div id="progress" class="muted"></div>
     <canvas id="preview" width="360" height="90"></canvas>
     <div id="legend"></div>
@@ -95,14 +110,15 @@
   </section>
 
   <section id="secApply" class="hidden">
-    <label class="row check"><input type="checkbox" id="clone" checked> Duplicar a sequência antes de cortar (recomendado)</label>
-    <label class="row check"><input type="checkbox" id="markDoubts" checked> Marcar trechos duvidosos (marcadores vermelhos)</label>
-    <button id="btnApply" class="primary">3. Aplicar cortes na timeline</button>
+    <label class="row check"><input type="checkbox" id="clone" checked> <span data-i18n="apply.clone"></span></label>
+    <label class="row check"><input type="checkbox" id="markDoubts" checked> <span data-i18n="apply.mark"></span></label>
+    <button id="btnApply" class="primary" data-i18n="btn.apply"></button>
     <div id="applyMsg"></div>
   </section>
 
   <div id="error" class="error hidden"></div>
 
+  <script src="js/i18n.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

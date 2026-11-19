@@ -166,7 +166,9 @@ const STRIP_SVG = `<svg viewBox="0 0 860 118" role="img" aria-label="__ALT__">
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const DOTS = ['#4f9dff', '#ff9f43', '#8a8f98'];
 
-function cards(list, n) {
+// 3 colunas só quando o número de cartões é múltiplo de 3; senão 2, para não sobrar um sozinho.
+function cards(list) {
+  const n = list.length % 3 === 0 ? 3 : 2;
   return `    <div class="grid c${n}">
 ${list.map((c) => `      <div class="card${c.pick ? ' pick' : ''}">
         <span class="tag">${c.tag}</span>
@@ -257,7 +259,7 @@ function page(t) {
   <div class="wrap">
     <h2>${t.s1.h}</h2>
     <p class="lead">${t.s1.lead}</p>
-${cards(t.s1.cards, 3)}
+${cards(t.s1.cards)}
   </div>
 </section>
 
@@ -265,7 +267,7 @@ ${cards(t.s1.cards, 3)}
   <div class="wrap">
     <h2>${t.s2.h}</h2>
     <p class="lead">${t.s2.lead}</p>
-${cards(t.s2.cards, 2)}
+${cards(t.s2.cards)}
   </div>
 </section>
 

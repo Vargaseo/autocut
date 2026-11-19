@@ -21,6 +21,9 @@ bash install.sh
 
 Feche e abra o Premiere → **Janela > Extensões (legado) > AutoCut**.
 
+O painel está em **português e inglês** — o seletor PT/EN fica no canto superior direito.
+Na primeira abertura ele segue o idioma do sistema.
+
 ## Como montar a sequência
 
 - Cada câmera em uma faixa de vídeo própria (ex.: V1 = Pessoa 1, V2 = Pessoa 2, V3 = aberto).
@@ -129,10 +132,21 @@ esses dois arquivos à mão: eles são sobrescritos.
 
 | Pasta | O que é |
 |---|---|
-| `AutoCut/` | O painel: `js/analysis.js` (decisão dos cortes), `js/main.js` (interface), `jsx/host.jsx` (fala com o Premiere), `py/mouth.py` (leitura da boca com MediaPipe) |
+| `AutoCut/` | O painel: `js/analysis.js` (decisão dos cortes), `js/main.js` (interface), `js/i18n.js` (textos PT/EN), `jsx/host.jsx` (fala com o Premiere), `py/mouth.py` (leitura da boca com MediaPipe) |
 | `docs/` | O site publicado em GitHub Pages (gerado), com a demonstração |
 | `tools/` | Gerador do site: `site-content.js` (textos PT/EN) e `build-site.js` |
 | `test/` | Testes automáticos |
+
+## Traduções
+
+Todos os textos do painel ficam em `AutoCut/js/i18n.js`, um objeto por idioma com as mesmas
+chaves. Na interface, os elementos trazem `data-i18n="chave"`; no código, usa-se `t('chave')`.
+Erros vindos do `analysis.js`, do `host.jsx` e do `mouth.py` viajam com um **código**
+(`err.algumaCoisa`) em vez de texto pronto, e o painel traduz na hora de mostrar — por isso as
+mensagens de erro também mudam de idioma.
+
+Para acrescentar um idioma, copie o bloco `en` em `i18n.js`, traduza os valores e adicione a
+opção no seletor em `AutoCut/index.html`.
 
 ## Licença
 

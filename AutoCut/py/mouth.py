@@ -90,12 +90,12 @@ def main():
 
     ffprobe = os.path.join(os.path.dirname(a.ffmpeg), "ffprobe") if os.path.dirname(a.ffmpeg) else "ffprobe"
     if not os.path.exists(a.file):
-        sys.stderr.write("ERRO arquivo nao encontrado: %s\n" % a.file)
+        sys.stderr.write("ERRO err.fileMissing|%s|\n" % a.file)
         sys.exit(2)
     try:
         sw, sh = probe(ffprobe, a.file)
     except Exception as e:  # sem video, arquivo corrompido, ffprobe ausente
-        sys.stderr.write("ERRO nao consegui ler o video de %s (%s)\n" % (a.file, e))
+        sys.stderr.write("ERRO err.videoUnreadable|%s|%s\n" % (a.file, e))
         sys.exit(2)
     W = min(a.width, sw - sw % 2)
     H = int(round(sh * W / sw / 2.0)) * 2
@@ -149,7 +149,7 @@ def main():
     err = proc.stderr.read().decode("utf-8", "replace")
     proc.wait()
     if not values:
-        sys.stderr.write("ERRO ffmpeg nao entregou quadros: %s\n" % err.strip()[:300])
+        sys.stderr.write("ERRO err.videoUnreadable|%s|%s\n" % (a.file, err.strip()[:200]))
         sys.exit(2)
     json.dump({"fps": a.fps, "open": values, "jaw": jaws, "chin": chins}, sys.stdout)
 
