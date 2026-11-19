@@ -249,6 +249,7 @@
       <li><strong>It decides the whole conversation at once.</strong> Instead of judging moment by moment and holding the previous camera whenever it is unsure, it picks the sequence of cuts that best explains the entire conversation, with a cost for every switch.</li>
       <li><strong>Short lines go to whoever has the stronger evidence</strong>, not automatically to whoever was already on air.</li>
       <li><strong>An “uh-huh” followed by silence does not become a shot.</strong> It counts actual speaking time inside the segment, not just its length.</li>
+      <li><strong>A turned head no longer fools it.</strong> Mouth measurements are taken along the face’s own axis rather than across the mouth’s width: turning sideways shrinks that width, which used to make someone “look like they were talking” just by moving their head.</li>
       <li><strong>Whatever stayed doubtful is handed to you marked</strong>, instead of hiding the mistake inside an hour of video.</li>
     </ul>
   </div>
@@ -327,7 +328,7 @@ cd autocut</code></pre>
     <h2>What it does not do yet</h2>
     <ul class="clean">
       <li><strong>It does not read nested or merged clips.</strong> Use the original files on the tracks.</li>
-      <li><strong>It cannot read a face in profile, turned away, or with the mouth covered.</strong> If a face disappears for too long, the panel warns you.</li>
+      <li><strong>A face fully turned away or covered cannot be read.</strong> In those stretches it works out the speaker from the other cameras, which is solid with two people and shakier with four. A face in profile reads normally.</li>
       <li><strong>Audio with changed speed is not supported</strong>, and video tracks must be unlocked.</li>
       <li><strong>There is no Adobe digital signature.</strong> The installer turns on <code>PlayerDebugMode</code>, the Premiere mode that accepts unsigned panels — and it applies to every panel, not just this one. You can turn it back off with <code>defaults write com.adobe.CSXS.12 PlayerDebugMode 0</code>.</li>
       <li><strong>Only tested on macOS.</strong> The panel is built on technology that runs on both systems, but nobody has run it on Windows yet.</li>

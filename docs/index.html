@@ -249,6 +249,7 @@
       <li><strong>Decide a conversa inteira de uma vez.</strong> Em vez de olhar instante a instante e, na dúvida, manter a câmera anterior, ele escolhe a sequência de cortes que melhor explica a conversa toda, com um custo para cada troca.</li>
       <li><strong>Falas curtas vão para quem tem mais evidência</strong>, e não automaticamente para quem já estava no ar.</li>
       <li><strong>Um “aham” seguido de silêncio não vira plano.</strong> Ele conta o tempo de fala real dentro do trecho, não só a duração.</li>
+      <li><strong>Cabeça virada não engana mais.</strong> As medidas da boca são tomadas no eixo do próprio rosto, não na largura da boca: virar de perfil encolhe a largura e isso fazia a pessoa “parecer falar” só por mexer a cabeça.</li>
       <li><strong>O que ficou duvidoso ele entrega marcado</strong>, em vez de esconder o erro no meio de uma hora de vídeo.</li>
     </ul>
   </div>
@@ -327,7 +328,7 @@ cd autocut</code></pre>
     <h2>O que ele ainda não faz</h2>
     <ul class="clean">
       <li><strong>Não lê clipes aninhados (nested) nem mesclados.</strong> Use os arquivos originais nas faixas.</li>
-      <li><strong>Não lê rosto de perfil, de costas ou com a boca coberta.</strong> Se o rosto some por muito tempo, o painel avisa.</li>
+      <li><strong>Rosto de costas ou totalmente coberto não é lido.</strong> Nesses trechos ele deduz quem fala pelas outras câmeras, o que funciona bem com duas pessoas e fica mais frágil com quatro. De perfil ele lê normalmente.</li>
       <li><strong>Não suporta áudio com velocidade alterada</strong>, e as faixas de vídeo precisam estar destravadas.</li>
       <li><strong>Não tem assinatura digital da Adobe.</strong> O instalador liga o <code>PlayerDebugMode</code>, o modo do Premiere que aceita painéis sem assinatura — e ele vale para todos os painéis, não só este. Dá para desligar depois com <code>defaults write com.adobe.CSXS.12 PlayerDebugMode 0</code>.</li>
       <li><strong>Testado só no macOS.</strong> O painel é feito em tecnologia que roda nos dois sistemas, mas ninguém rodou no Windows ainda.</li>

@@ -55,8 +55,18 @@ Ajustes avançados do modo:
 - **Peso da sincronia boca-voz:** 0,7 por padrão. Abaixe se o vídeo estiver fora de sincronia com o áudio; 0 desliga.
 - **Semelhança p/ fala simultânea:** quão parecido o movimento de duas bocas precisa ser para virar plano aberto.
 
-Limitações: pessoa de perfil, de costas ou com a boca coberta (mão, microfone) não é lida;
-se o rosto some por muito tempo o painel avisa.
+**Pessoa de perfil:** funciona. As medidas são tomadas no eixo do próprio rosto (nasion → nariz
+→ lábios → queixo), que são pontos da linha do meio. Virar a cabeça encolhe as distâncias
+horizontais, não as verticais — por isso a largura da boca e a distância entre os olhos saíram
+de cena: com a boca parada, só girando até o perfil, aquelas razões inflavam mais de 10x e a
+pessoa "parecia falar" o tempo todo.
+
+**Rosto que some de vez** (de costas, mão na frente): falhas de até meio segundo são costuradas
+por interpolação. Em trechos maiores o AutoCut deduz pelo complemento — se há fala e todos os
+rostos visíveis estão claramente parados, quem fala é quem não se vê. Isso é sólido com duas
+pessoas e fica mais frágil quanto mais gente houver.
+
+Limitação que resta: boca coberta **e** rosto parado ao mesmo tempo, em todas as câmeras.
 
 ## Usar
 
@@ -85,7 +95,11 @@ se o rosto some por muito tempo o painel avisa.
   a sequência de planos que melhor explica a conversa toda, com um custo para cada troca
   (Avançado → *Evidência para trocar de câmera*: mais alto = menos trocas).
 - **Fala curta:** um trecho curto vai para o vizinho com mais evidência, não sempre para quem estava antes.
-- **Leitura da boca:** usa lábios, mandíbula e queixo — o queixo continua visível com microfone na frente da boca.
+- **Leitura da boca:** usa lábios, mandíbula, queixo e a articulação (blendshapes do MediaPipe,
+  que já vêm normalizados pela pose da cabeça). As medidas geométricas são tomadas no eixo do
+  rosto, então giro e tombo da cabeça não atrapalham.
+- **Rosto escondido:** falhas curtas são interpoladas; nas longas, deduz-se pelo complemento
+  (se os rostos visíveis estão parados e há fala, quem fala é quem não se vê).
 - **Trechos duvidosos:** quando alguém parece falar por um bom tempo com a câmera em outra pessoa,
   aparece um ▼ vermelho na prévia e um marcador vermelho "AutoCut: conferir" na sequência.
   Pule de marcador em marcador (Shift+M) para revisar só esses pontos.

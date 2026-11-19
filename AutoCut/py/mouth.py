@@ -1,16 +1,28 @@
 #!/usr/bin/env python3
-"""AutoCut - mede a abertura da boca quadro a quadro em um trecho de video.
+"""AutoCut - mede o movimento da boca quadro a quadro em um trecho de video.
 
-Saida (stdout): JSON {"fps": F, "open": [..], "jaw": [..], "chin": [..]}  (-1 = sem rosto)
-  open: abertura dos labios (altura/largura da boca)
-  jaw:  "jawOpen" do MediaPipe (mandibula aberta, estimada pelo rosto todo)
-  chin: distancia nariz-queixo / distancia entre os olhos (o queixo desce ao falar,
-        mesmo com um microfone na frente da boca)
+Saida (stdout): JSON {"fps": F, "open": [..], "jaw": [..], "chin": [..], "artic": [..], "yaw": [..]}
+  (-1 = sem rosto naquele quadro; yaw = -999 quando nao se sabe)
+
+  open:  abertura dos labios medida AO LONGO do eixo vertical do rosto
+  chin:  queixo-nariz no mesmo eixo (o queixo desce ao falar, mesmo com microfone na frente)
+  jaw:   "jawOpen" do MediaPipe (ja vem normalizado pela pose da cabeca)
+  artic: mistura de blendshapes da boca (abrir, arredondar, esticar) - articulacao
+  yaw:   giro horizontal da cabeca em graus (0 = de frente, 90 = perfil)
+
+Por que nao se mede mais pela largura da boca / distancia entre os olhos:
+  essas sao distancias HORIZONTAIS e encolhem com o cosseno do giro da cabeca. Com a boca
+  parada, so girando a cabeca ate o perfil, aquelas razoes infl am mais de 10x - a pessoa de
+  perfil "parecia falar" o tempo todo. Os pontos usados agora (nasion, nariz, labios, queixo)
+  ficam todos na linha do meio do rosto, e a medida e tomada na direcao do eixo do rosto:
+  isso nao muda quando a cabeca gira de lado nem quando ela tomba.
+
 Progresso (stderr): linhas "PROGRESS 0.42".
 Compativel com Python 3.9.
 """
 import argparse
 import json
+import math
 import os
 import subprocess
 import sys
@@ -18,11 +30,29 @@ import sys
 import numpy as np
 import mediapipe as mp
 
-# indices da malha de rosto do MediaPipe
-UPPER_LIP, LOWER_LIP = 13, 14
-MOUTH_LEFT, MOUTH_RIGHT = 78, 308
-NOSE_TIP, CHIN = 1, 152
-EYE_LEFT, EYE_RIGHT = 33, 263
+# pontos da malha de rosto do MediaPipe, todos na linha do meio do rosto
+NASION = 168      # entre as sobrancelhas
+NOSE_TIP = 1
+UPPER_LIP = 13    # borda interna do labio superior
+LOWER_LIP = 14    # borda interna do labio inferior
+CHIN = 152
+
+# blendshapes que acompanham a fala
+ARTIC_SHAPES = {
+    "jawOpen": 1.0,
+    "mouthClose": 0.6,
+    "mouthFunnel": 0.8,
+    "mouthPucker": 0.6,
+    "mouthStretchLeft": 0.4,
+    "mouthStretchRight": 0.4,
+    "mouthLowerDownLeft": 0.5,
+    "mouthLowerDownRight": 0.5,
+    "mouthUpperUpLeft": 0.4,
+    "mouthUpperUpRight": 0.4,
+}
+
+NO_FACE = -1.0
+NO_YAW = -999.0
 
 
 def probe(ffprobe, path):
@@ -44,31 +74,50 @@ def probe(ffprobe, path):
     return w, h
 
 
-def mouth_open(lms):
-    up, lo = lms[UPPER_LIP], lms[LOWER_LIP]
-    le, ri = lms[MOUTH_LEFT], lms[MOUTH_RIGHT]
-    width = ((le.x - ri.x) ** 2 + (le.y - ri.y) ** 2) ** 0.5
-    if width < 1e-6:
-        return -1.0
-    return (((up.x - lo.x) ** 2 + (up.y - lo.y) ** 2) ** 0.5) / width
+def axis_measures(lms, aspect):
+    """Abertura da boca e queda do queixo medidas no eixo vertical do proprio rosto.
+
+    Devolve (open, chin) ou (-1, -1) se nao der para medir. As coordenadas do MediaPipe sao
+    normalizadas por largura/altura da imagem, entao a largura e multiplicada pelo aspecto
+    para voltar a ser proporcional.
+    """
+    def pt(i):
+        return (lms[i].x * aspect, lms[i].y)
+
+    nas, nose = pt(NASION), pt(NOSE_TIP)
+    ax, ay = nas[0] - nose[0], nas[1] - nose[1]
+    ref = math.hypot(ax, ay)                  # segmento rigido do rosto: serve de escala
+    if ref < 1e-6:
+        return NO_FACE, NO_FACE
+    ax, ay = ax / ref, ay / ref               # eixo "para cima" do rosto (absorve o tombo)
+
+    up, lo, chin = pt(UPPER_LIP), pt(LOWER_LIP), pt(CHIN)
+    gap = abs((lo[0] - up[0]) * ax + (lo[1] - up[1]) * ay) / ref
+    drop = abs((chin[0] - nose[0]) * ax + (chin[1] - nose[1]) * ay) / ref
+    return gap, drop
 
 
-def dist(a, b):
-    return ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5
-
-
-def chin_drop(lms):
-    eyes = dist(lms[EYE_LEFT], lms[EYE_RIGHT])
-    if eyes < 1e-6:
-        return -1.0
-    return dist(lms[NOSE_TIP], lms[CHIN]) / eyes
-
-
-def jaw_open(blendshapes):
-    for c in blendshapes or []:
+def blendshapes(cats):
+    """jawOpen isolado e a mistura de articulacao."""
+    jaw, artic, total = NO_FACE, 0.0, 0.0
+    for c in cats or []:
+        w = ARTIC_SHAPES.get(c.category_name)
+        if w is not None:
+            artic += w * float(c.score)
+            total += w
         if c.category_name == "jawOpen":
-            return float(c.score)
-    return -1.0
+            jaw = float(c.score)
+    return jaw, (artic / total if total else NO_FACE)
+
+
+def head_yaw(matrix):
+    """Giro horizontal da cabeca, em graus (0 = de frente)."""
+    try:
+        m = np.array(matrix).reshape(4, 4)
+        # coluna Z da rotacao aponta para onde o rosto olha
+        return abs(math.degrees(math.asin(max(-1.0, min(1.0, float(m[0, 2]))))))
+    except Exception:
+        return NO_YAW
 
 
 def face_size(lms):
@@ -99,6 +148,7 @@ def main():
         sys.exit(2)
     W = min(a.width, sw - sw % 2)
     H = int(round(sh * W / sw / 2.0)) * 2
+    aspect = float(W) / float(H)
     frame_bytes = W * H * 3
     total = max(1, int(a.dur * a.fps))
 
@@ -107,16 +157,19 @@ def main():
            "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=frame_bytes * 4)
 
+    # limiares baixos de proposito: de perfil a confianca cai, e perder o rosto e pior
+    # do que aceitar uma deteccao mais fraca (o yaw informa o quanto confiar).
     opts = mp.tasks.vision.FaceLandmarkerOptions(
         base_options=mp.tasks.BaseOptions(model_asset_path=a.model),
         running_mode=mp.tasks.vision.RunningMode.VIDEO,
         num_faces=2,
-        min_face_detection_confidence=0.4,
-        min_face_presence_confidence=0.4,
-        min_tracking_confidence=0.4,
-        output_face_blendshapes=True)
+        min_face_detection_confidence=0.25,
+        min_face_presence_confidence=0.25,
+        min_tracking_confidence=0.25,
+        output_face_blendshapes=True,
+        output_facial_transformation_matrixes=True)
 
-    values, jaws, chins = [], [], []
+    opens, jaws, chins, artics, yaws = [], [], [], [], []
     last_p = -1.0
     with mp.tasks.vision.FaceLandmarker.create_from_options(opts) as lm:
         i = 0
@@ -127,18 +180,22 @@ def main():
             img = np.frombuffer(buf, dtype=np.uint8).reshape((H, W, 3))
             res = lm.detect_for_video(mp.Image(image_format=mp.ImageFormat.SRGB, data=img),
                                       int(round(i * 1000.0 / a.fps)))
-            v, jw, ch = -1.0, -1.0, -1.0
+            o = c = j = ar = NO_FACE
+            yw = NO_YAW
             if res.face_landmarks:
-                # rosto maior = pessoa da camera
+                # rosto maior = pessoa daquela camera
                 bi = max(range(len(res.face_landmarks)), key=lambda k: face_size(res.face_landmarks[k]))
-                best = res.face_landmarks[bi]
-                v = mouth_open(best)
-                ch = chin_drop(best)
+                o, c = axis_measures(res.face_landmarks[bi], aspect)
                 if res.face_blendshapes and bi < len(res.face_blendshapes):
-                    jw = jaw_open(res.face_blendshapes[bi])
-            values.append(round(v, 4))
-            jaws.append(round(jw, 4))
-            chins.append(round(ch, 4))
+                    j, ar = blendshapes(res.face_blendshapes[bi])
+                mats = getattr(res, "facial_transformation_matrixes", None)
+                if mats and bi < len(mats):
+                    yw = head_yaw(mats[bi])
+            opens.append(round(o, 5))
+            chins.append(round(c, 5))
+            jaws.append(round(j, 5))
+            artics.append(round(ar, 5))
+            yaws.append(round(yw, 1))
             i += 1
             p = min(1.0, i / float(total))
             if p - last_p >= 0.01:
@@ -148,10 +205,11 @@ def main():
 
     err = proc.stderr.read().decode("utf-8", "replace")
     proc.wait()
-    if not values:
+    if not opens:
         sys.stderr.write("ERRO err.videoUnreadable|%s|%s\n" % (a.file, err.strip()[:200]))
         sys.exit(2)
-    json.dump({"fps": a.fps, "open": values, "jaw": jaws, "chin": chins}, sys.stdout)
+    json.dump({"fps": a.fps, "open": opens, "jaw": jaws, "chin": chins,
+               "artic": artics, "yaw": yaws}, sys.stdout)
 
 
 if __name__ == "__main__":

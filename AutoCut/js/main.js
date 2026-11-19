@@ -344,6 +344,7 @@
     }
 
     $('btnAnalyze').disabled = true;
+    const notes = [];
     try {
       if (m === 'mics') {
         const envs = [];
@@ -387,17 +388,40 @@
         };
         showProg();
         await Promise.all(Array.from({ length: Math.min(PARALLEL_CAMERAS, speakers.length) }, worker));
-        const noFace = mouths.map((s, i) => {
+        // Rosto escondido já não é um impedimento: nesses trechos o AutoCut deduz pela outra
+        // câmera. Só vira erro quando quase não há rosto no vídeo inteiro.
+        const faceStats = mouths.map((s, i) => {
           const o = s.open || s;
-          let n = 0; for (let k = 0; k < o.length; k++) if (o[k] === o[k]) n++;
-          return { name: speakers[i].name, pct: n / Math.max(1, o.length) };
-        }).filter((x) => x.pct < 0.5);
-        if (noFace.length) {
-          showError(t('err.noFace', { list: noFace.map((x) => `${x.name} (${Math.round(x.pct * 100)}%)`).join(', ') }));
+          let n = 0, side = 0, seen = 0;
+          for (let k = 0; k < o.length; k++) if (o[k] === o[k]) n++;
+          const yaw = s.yaw;
+          if (yaw) for (let k = 0; k < yaw.length; k++) {
+            if (yaw[k] === yaw[k]) { seen++; if (Math.abs(yaw[k]) >= 45) side++; }
+          }
+          return {
+            name: speakers[i].name,
+            seen: n / Math.max(1, o.length),
+            profile: seen ? side / seen : 0
+          };
+        });
+        const gone = faceStats.filter((x) => x.seen < 0.2);
+        const partial = faceStats.filter((x) => x.seen >= 0.2 && x.seen < 0.75);
+        if (gone.length) {
+          showError(t('err.noFace', { list: gone.map((x) => `${x.name} (${Math.round(x.seen * 100)}%)`).join(', ') }));
+        } else if (partial.length) {
+          notes.push(t('info.hidden', {
+            list: partial.map((x) => `${x.name} (${Math.round((1 - x.seen) * 100)}%)`).join(', ')
+          }));
+        }
+        const sideways = faceStats.filter((x) => x.profile > 0.3);
+        if (sideways.length) {
+          notes.push(t('info.profile', {
+            list: sideways.map((x) => `${x.name} (${Math.round(x.profile * 100)}%)`).join(', ')
+          }));
         }
         inputs = { mode: m, speakers, audioEnv, mouths };
       }
-      $('progress').textContent = t('msg.ready');
+      $('progress').textContent = t('msg.ready') + (notes.length ? '\n' + notes.join('\n') : '');
       renderMaxTable();
       rerun();
       $('secApply').classList.remove('hidden');

@@ -43,13 +43,18 @@ function mocks(demo) {
       }
       return a;
     }
+    // mesmas medidas que o py/mouth.py devolve
     function mouth(talk, ph, fps) {
-      var M = Math.ceil(DUR * fps) + 1, o = new Float32Array(M), j = new Float32Array(M), c = new Float32Array(M);
+      var M = Math.ceil(DUR * fps) + 1;
+      var o = new Float32Array(M), j = new Float32Array(M), c = new Float32Array(M);
+      var ar = new Float32Array(M), yw = new Float32Array(M);
       for (var i = 0; i < M; i++) {
         var t = i / fps, m = on(talk, t) ? syl(t, ph) : 0.04 * Math.random();
         o[i] = 0.09 + 0.3 * m; j[i] = 0.05 + 0.4 * m; c[i] = 1.4 + 0.08 * m;
+        ar[i] = 0.05 + 0.45 * m;
+        yw[i] = 8 * Math.sin(2 * Math.PI * 0.2 * t);
       }
-      return { open: o, jaw: j, chin: c };
+      return { open: o, jaw: j, chin: c, artic: ar, yaw: yw };
     }
     var calls = window.__calls = [];
     var fake = Object.assign({}, real, {

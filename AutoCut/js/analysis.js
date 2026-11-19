@@ -156,7 +156,8 @@ function mergeRuns(runs) {
   return out;
 }
 
-const MOUTH_FEATURES = ['open', 'jaw', 'chin'];
+const MOUTH_FEATURES = ['open', 'jaw', 'chin', 'artic'];
+const MOUTH_EXTRA = ['yaw'];   // nao e medida de movimento: so informa a pose da cabeca
 
 function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
 
@@ -280,25 +281,47 @@ async function buildMouthTracks(env, cams, totalDur, fps, onProgress) {
   const tracks = [];
   for (let ci = 0; ci < cams.length; ci++) {
     const feat = {};
-    for (const k of MOUTH_FEATURES) feat[k] = new Float32Array(N).fill(NaN);
+    for (const k of MOUTH_FEATURES.concat(MOUTH_EXTRA)) feat[k] = new Float32Array(N).fill(NaN);
     const clips = cams[ci].clips.filter((c) => c.path && c.end > c.start);
     for (let k = 0; k < clips.length; k++) {
       const c = clips[k];
       const res = await extractMouth(env.python, env.script, env.model, env.ffmpeg, c.path, c.inPoint,
         c.end - c.start, fps, (p) => onProgress && onProgress(ci, (k + p) / clips.length));
       const off = Math.round(c.start * fps);
-      for (const name of MOUTH_FEATURES) {
+      for (const name of MOUTH_FEATURES.concat(MOUTH_EXTRA)) {
         const src = res[name];
         if (!src) continue;
+        const floor = name === 'yaw' ? -180 : 0;   // yaw negativo e valido; -999 = desconhecido
         for (let i = 0; i < src.length && off + i < N; i++) {
-          if (off + i >= 0 && src[i] >= 0) feat[name][off + i] = src[i];
+          if (off + i >= 0 && src[i] >= floor) feat[name][off + i] = src[i];
         }
       }
     }
+    // o rosto some por um instante (vira de lado, passa a mao): costura falhas curtas
+    const maxGap = Math.round(0.5 * fps);
+    for (const name of MOUTH_FEATURES) fillGaps(feat[name], maxGap);
     if (onProgress) onProgress(ci, 1);
     tracks.push(feat);
   }
   return tracks;
+}
+
+// Interpola buracos de ate `maxGap` quadros; buracos maiores ficam como estao (sem rosto).
+function fillGaps(arr, maxGap) {
+  const N = arr.length;
+  let i = 0;
+  while (i < N) {
+    if (arr[i] === arr[i]) { i++; continue; }
+    let j = i;
+    while (j < N && arr[j] !== arr[j]) j++;
+    const before = i > 0 ? arr[i - 1] : NaN;
+    const after = j < N ? arr[j] : NaN;
+    if (j - i <= maxGap && before === before && after === after) {
+      for (let k = i; k < j; k++) arr[k] = before + (after - before) * (k - i + 1) / (j - i + 1);
+    }
+    i = j;
+  }
+  return arr;
 }
 
 // Movimento: desvio padrao de uma medida numa janela (~0.6 s), reamostrado para o hop do audio.
@@ -459,17 +482,35 @@ function decideMouth(audioEnv, mouth, o) {
 
   const s = v.map(() => new Float32Array(N));
   const ovl = Math.max(0.05, 1 - o.mouthOverlap);
+  // Quando uma camera esta sem rosto (de costas, muito de lado, mao na frente), ela nao e
+  // mais tratada como "boca parada" — isso fazia a camera ir para quem estava visivel.
+  // Em vez disso, deduz-se pelo complemento: se ha fala e TODOS os rostos visiveis estao
+  // claramente parados, quem fala e provavelmente quem nao se consegue ver.
+  const trust = o.hiddenTrust === undefined ? 0.7 : Math.max(0, Math.min(1, o.hiddenTrust));
+  const hidden = new Array(S).fill(0);
   for (let f = 0; f < N; f++) {
-    let mm = 0;
-    for (let i = 0; i < S; i++) if (v[i][f] === v[i][f]) mm = Math.max(mm, v[i][f]);
+    let maxVis = 0, anyVis = false;
     for (let i = 0; i < S; i++) {
-      const x = v[i][f] === v[i][f] ? v[i][f] : 0;
+      if (v[i][f] === v[i][f]) { anyVis = true; maxVis = Math.max(maxVis, v[i][f]); }
+    }
+    const implied = anyVis && trust > 0 ? trust * Math.max(0, 1 - maxVis / 0.8) : 0;
+    let mm = 0;
+    for (let i = 0; i < S; i++) {
+      const ev = v[i][f] === v[i][f] ? v[i][f] : implied;
+      if (ev > mm) mm = ev;
+    }
+    for (let i = 0; i < S; i++) {
+      const known = v[i][f] === v[i][f];
+      const x = known ? v[i][f] : implied;
+      if (!known) hidden[i]++;
       const moving = sigmoid((x - o.mouthMin) / 0.08);
       const dom = mm > 0 ? Math.exp(-Math.max(0, 1 - x / mm) / ovl) : 0;
       s[i][f] = speech[f] * moving * dom;
     }
   }
-  return decodeShots(s, o);
+  const res = decodeShots(s, o);
+  res.hiddenPct = hidden.map((n) => n / Math.max(1, N));
+  return res;
 }
 
 function emptyResult() {
@@ -705,6 +746,6 @@ function applyMaxOnAir(runs, s, o, minF) {
 
 module.exports = {
   findFfmpeg, extractEnvelope, buildEnvelopes, decide,
-  extractMouth, buildMouthTracks, decideMouth, removeBleed, mouthSync, applyMaxOnAir,
-  NONE, OVERLAP, WIDE, MOUTH_FEATURES
+  extractMouth, buildMouthTracks, decideMouth, removeBleed, mouthSync, applyMaxOnAir, fillGaps,
+  NONE, OVERLAP, WIDE, MOUTH_FEATURES, MOUTH_EXTRA
 };

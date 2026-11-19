@@ -50,6 +50,7 @@ const pt = {
       '<strong>Decide a conversa inteira de uma vez.</strong> Em vez de olhar instante a instante e, na dúvida, manter a câmera anterior, ele escolhe a sequência de cortes que melhor explica a conversa toda, com um custo para cada troca.',
       '<strong>Falas curtas vão para quem tem mais evidência</strong>, e não automaticamente para quem já estava no ar.',
       '<strong>Um “aham” seguido de silêncio não vira plano.</strong> Ele conta o tempo de fala real dentro do trecho, não só a duração.',
+      '<strong>Cabeça virada não engana mais.</strong> As medidas da boca são tomadas no eixo do próprio rosto, não na largura da boca: virar de perfil encolhe a largura e isso fazia a pessoa “parecer falar” só por mexer a cabeça.',
       '<strong>O que ficou duvidoso ele entrega marcado</strong>, em vez de esconder o erro no meio de uma hora de vídeo.'
     ]
   },
@@ -86,7 +87,7 @@ const pt = {
     h: 'O que ele ainda não faz',
     items: [
       '<strong>Não lê clipes aninhados (nested) nem mesclados.</strong> Use os arquivos originais nas faixas.',
-      '<strong>Não lê rosto de perfil, de costas ou com a boca coberta.</strong> Se o rosto some por muito tempo, o painel avisa.',
+      '<strong>Rosto de costas ou totalmente coberto não é lido.</strong> Nesses trechos ele deduz quem fala pelas outras câmeras, o que funciona bem com duas pessoas e fica mais frágil com quatro. De perfil ele lê normalmente.',
       '<strong>Não suporta áudio com velocidade alterada</strong>, e as faixas de vídeo precisam estar destravadas.',
       '<strong>Não tem assinatura digital da Adobe.</strong> O instalador liga o <code>PlayerDebugMode</code>, o modo do Premiere que aceita painéis sem assinatura — e ele vale para todos os painéis, não só este. Dá para desligar depois com <code>defaults write com.adobe.CSXS.12 PlayerDebugMode 0</code>.',
       '<strong>Testado só no macOS.</strong> O painel é feito em tecnologia que roda nos dois sistemas, mas ninguém rodou no Windows ainda.'
@@ -156,6 +157,7 @@ const en = {
       '<strong>It decides the whole conversation at once.</strong> Instead of judging moment by moment and holding the previous camera whenever it is unsure, it picks the sequence of cuts that best explains the entire conversation, with a cost for every switch.',
       '<strong>Short lines go to whoever has the stronger evidence</strong>, not automatically to whoever was already on air.',
       '<strong>An “uh-huh” followed by silence does not become a shot.</strong> It counts actual speaking time inside the segment, not just its length.',
+      '<strong>A turned head no longer fools it.</strong> Mouth measurements are taken along the face’s own axis rather than across the mouth’s width: turning sideways shrinks that width, which used to make someone “look like they were talking” just by moving their head.',
       '<strong>Whatever stayed doubtful is handed to you marked</strong>, instead of hiding the mistake inside an hour of video.'
     ]
   },
@@ -192,7 +194,7 @@ const en = {
     h: 'What it does not do yet',
     items: [
       '<strong>It does not read nested or merged clips.</strong> Use the original files on the tracks.',
-      '<strong>It cannot read a face in profile, turned away, or with the mouth covered.</strong> If a face disappears for too long, the panel warns you.',
+      '<strong>A face fully turned away or covered cannot be read.</strong> In those stretches it works out the speaker from the other cameras, which is solid with two people and shakier with four. A face in profile reads normally.',
       '<strong>Audio with changed speed is not supported</strong>, and video tracks must be unlocked.',
       '<strong>There is no Adobe digital signature.</strong> The installer turns on <code>PlayerDebugMode</code>, the Premiere mode that accepts unsigned panels — and it applies to every panel, not just this one. You can turn it back off with <code>defaults write com.adobe.CSXS.12 PlayerDebugMode 0</code>.',
       '<strong>Only tested on macOS.</strong> The panel is built on technology that runs on both systems, but nobody has run it on Windows yet.'
