@@ -88,9 +88,10 @@ const pt = {
       '<strong>Não lê clipes aninhados (nested) nem mesclados.</strong> Use os arquivos originais nas faixas.',
       '<strong>Não lê rosto de perfil, de costas ou com a boca coberta.</strong> Se o rosto some por muito tempo, o painel avisa.',
       '<strong>Não suporta áudio com velocidade alterada</strong>, e as faixas de vídeo precisam estar destravadas.',
-      '<strong>Não tem assinatura digital da Adobe.</strong> O instalador liga o modo do Premiere que aceita painéis sem assinatura.',
+      '<strong>Não tem assinatura digital da Adobe.</strong> O instalador liga o <code>PlayerDebugMode</code>, o modo do Premiere que aceita painéis sem assinatura — e ele vale para todos os painéis, não só este. Dá para desligar depois com <code>defaults write com.adobe.CSXS.12 PlayerDebugMode 0</code>.',
       '<strong>Testado só no macOS.</strong> O painel é feito em tecnologia que roda nos dois sistemas, mas ninguém rodou no Windows ainda.'
     ],
+    note2: 'O painel não acessa a internet: ele lê os arquivos da sua sequência com o ffmpeg e o Python na sua própria máquina, e não envia nada para lugar nenhum.',
     note: '<strong>Em desenvolvimento.</strong> A lógica de decisão é verificada por testes automáticos, mas com áudio e vídeo simulados — ainda não foi medida em gravações reais. Trate os primeiros cortes como um rascunho e confira os marcadores vermelhos.'
   },
   contact: {
@@ -193,9 +194,10 @@ const en = {
       '<strong>It does not read nested or merged clips.</strong> Use the original files on the tracks.',
       '<strong>It cannot read a face in profile, turned away, or with the mouth covered.</strong> If a face disappears for too long, the panel warns you.',
       '<strong>Audio with changed speed is not supported</strong>, and video tracks must be unlocked.',
-      '<strong>There is no Adobe digital signature.</strong> The installer turns on the Premiere mode that accepts unsigned panels.',
+      '<strong>There is no Adobe digital signature.</strong> The installer turns on <code>PlayerDebugMode</code>, the Premiere mode that accepts unsigned panels — and it applies to every panel, not just this one. You can turn it back off with <code>defaults write com.adobe.CSXS.12 PlayerDebugMode 0</code>.',
       '<strong>Only tested on macOS.</strong> The panel is built on technology that runs on both systems, but nobody has run it on Windows yet.'
     ],
+    note2: 'The panel does not use the internet: it reads your sequence’s files with ffmpeg and Python on your own machine, and sends nothing anywhere.',
     note: '<strong>Work in progress.</strong> The decision logic is covered by automated tests, but with simulated audio and video — it has not been measured on real recordings yet. Treat the first pass as a rough cut and check the red markers.'
   },
   contact: {

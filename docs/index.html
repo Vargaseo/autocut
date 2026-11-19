@@ -329,9 +329,10 @@ cd autocut</code></pre>
       <li><strong>Não lê clipes aninhados (nested) nem mesclados.</strong> Use os arquivos originais nas faixas.</li>
       <li><strong>Não lê rosto de perfil, de costas ou com a boca coberta.</strong> Se o rosto some por muito tempo, o painel avisa.</li>
       <li><strong>Não suporta áudio com velocidade alterada</strong>, e as faixas de vídeo precisam estar destravadas.</li>
-      <li><strong>Não tem assinatura digital da Adobe.</strong> O instalador liga o modo do Premiere que aceita painéis sem assinatura.</li>
+      <li><strong>Não tem assinatura digital da Adobe.</strong> O instalador liga o <code>PlayerDebugMode</code>, o modo do Premiere que aceita painéis sem assinatura — e ele vale para todos os painéis, não só este. Dá para desligar depois com <code>defaults write com.adobe.CSXS.12 PlayerDebugMode 0</code>.</li>
       <li><strong>Testado só no macOS.</strong> O painel é feito em tecnologia que roda nos dois sistemas, mas ninguém rodou no Windows ainda.</li>
     </ul>
+    <div class="note"><p>O painel não acessa a internet: ele lê os arquivos da sua sequência com o ffmpeg e o Python na sua própria máquina, e não envia nada para lugar nenhum.</p></div>
     <div class="note"><p><strong>Em desenvolvimento.</strong> A lógica de decisão é verificada por testes automáticos, mas com áudio e vídeo simulados — ainda não foi medida em gravações reais. Trate os primeiros cortes como um rascunho e confira os marcadores vermelhos.</p></div>
   </div>
 </section>

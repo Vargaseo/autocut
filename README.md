@@ -137,6 +137,41 @@ esses dois arquivos à mão: eles são sobrescritos.
 | `tools/` | Gerador do site: `site-content.js` (textos PT/EN) e `build-site.js` |
 | `test/` | Testes automáticos |
 
+## O que o instalador muda na sua máquina
+
+- **Copia o painel** para `~/Library/Application Support/Adobe/CEP/extensions/com.autocut.panel`.
+- **Liga o `PlayerDebugMode`** do Premiere (`defaults write com.adobe.CSXS.12 PlayerDebugMode 1`).
+  Sem isso o Premiere recusa painéis sem assinatura da Adobe. Atenção: esse ajuste vale para
+  **todos** os painéis, não só o AutoCut — enquanto estiver ligado, qualquer extensão sem
+  assinatura pode carregar. Para desligar depois:
+
+  ```bash
+  defaults write com.adobe.CSXS.12 PlayerDebugMode 0
+  ```
+
+- O `setup_lipsync.sh` cria um Python isolado em `~/Library/Application Support/AutoCut` e baixa
+  o modelo de rosto do servidor oficial do MediaPipe (Google). Para remover tudo, apague essa pasta.
+
+O painel **não acessa a internet** e não envia nada para lugar nenhum: ele só lê os arquivos de
+mídia da sua sequência, com o ffmpeg e o Python rodando na sua máquina.
+
+### Depurar o painel
+
+O arquivo `AutoCut/.debug` abre uma porta de depuração no Premiere e por isso **não vai no
+repositório nem é instalado**. Se precisar dele em desenvolvimento, crie-o na pasta `AutoCut/`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionList>
+  <Extension Id="com.autocut.panel.main">
+    <HostList><Host Name="PPRO" Port="8099"/></HostList>
+  </Extension>
+</ExtensionList>
+```
+
+Para a maior parte dos ajustes de interface, porém, a banca de testes no navegador
+(`node test/make_harness.js`) já resolve, sem abrir porta nenhuma.
+
 ## Traduções
 
 Todos os textos do painel ficam em `AutoCut/js/i18n.js`, um objeto por idioma com as mesmas

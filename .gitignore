@@ -4,3 +4,6 @@ node_modules/
 
 # gerado por test/make_harness.js (nao e instalado no Premiere)
 AutoCut/_harness.html
+
+# abre uma porta de depuração no Premiere — só para desenvolvimento, nunca no repositório
+AutoCut/.debug

@@ -307,6 +307,7 @@ ${steps(t.s6.steps)}
   <div class="wrap">
     <h2>${t.s7.h}</h2>
 ${bullets(t.s7.items)}
+    <div class="note"><p>${t.s7.note2}</p></div>
     <div class="note"><p>${t.s7.note}</p></div>
   </div>
 </section>

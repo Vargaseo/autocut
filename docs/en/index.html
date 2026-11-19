@@ -329,9 +329,10 @@ cd autocut</code></pre>
       <li><strong>It does not read nested or merged clips.</strong> Use the original files on the tracks.</li>
       <li><strong>It cannot read a face in profile, turned away, or with the mouth covered.</strong> If a face disappears for too long, the panel warns you.</li>
       <li><strong>Audio with changed speed is not supported</strong>, and video tracks must be unlocked.</li>
-      <li><strong>There is no Adobe digital signature.</strong> The installer turns on the Premiere mode that accepts unsigned panels.</li>
+      <li><strong>There is no Adobe digital signature.</strong> The installer turns on <code>PlayerDebugMode</code>, the Premiere mode that accepts unsigned panels — and it applies to every panel, not just this one. You can turn it back off with <code>defaults write com.adobe.CSXS.12 PlayerDebugMode 0</code>.</li>
       <li><strong>Only tested on macOS.</strong> The panel is built on technology that runs on both systems, but nobody has run it on Windows yet.</li>
     </ul>
+    <div class="note"><p>The panel does not use the internet: it reads your sequence’s files with ffmpeg and Python on your own machine, and sends nothing anywhere.</p></div>
     <div class="note"><p><strong>Work in progress.</strong> The decision logic is covered by automated tests, but with simulated audio and video — it has not been measured on real recordings yet. Treat the first pass as a rough cut and check the red markers.</p></div>
   </div>
 </section>
