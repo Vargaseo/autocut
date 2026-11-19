@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>AutoCut — demonstração</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { max-width: 420px; margin: 0 auto; }
+    .demo-note { background: #1d3049; border: 1px solid #2d8ceb; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 11px; line-height: 1.5; }
+    .demo-note a { color: #7cb9f3; }
+  </style>
+</head>
+<body>
+  <div class="demo-note">
+    <strong>Demonstração</strong> — este é o painel real do AutoCut, com uma sequência de exemplo
+    no lugar do Premiere. Analise, mexa nos ajustes e veja a prévia mudar.
+    <a href="../">Voltar ao site</a>
+  </div>
+
+  <header>
+    <h1>AutoCut</h1>
+    <span class="sub">Troca de câmera automática por quem fala</span>
+  </header>
+
+  <section>
+    <button id="btnRead" class="primary">1. Ler sequência ativa</button>
+    <div id="seqName" class="muted"></div>
+  </section>
+
+  <section id="secSpeakers" class="hidden">
+    <h2>Pessoas</h2>
+    <label class="row">Gravação
+      <select id="mode">
+        <option value="mouth">Um microfone só (leitura da boca)</option>
+        <option value="mics">Um microfone por pessoa</option>
+      </select>
+    </label>
+    <label class="row hidden" id="rowAudio">Áudio do podcast
+      <span><select id="selAudio"></select> <select id="selAudioCh">
+        <option value="mix">Mix</option><option value="L">Esq.</option><option value="R">Dir.</option>
+      </select></span>
+    </label>
+    <p class="hint" id="hintMode"></p>
+    <table id="tblSpeakers">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+    <label class="row">Câmera aberta (wide)
+      <select id="selWide"></select>
+    </label>
+  </section>
+
+  <section id="secSettings" class="hidden">
+    <h2>Ajustes</h2>
+    <label class="row">Sensibilidade <span id="vSens"></span>
+      <input type="range" id="sens" min="0" max="100" value="50">
+    </label>
+    <label class="row">Duração mínima do plano (s)
+      <input type="number" id="minShot" min="0.5" max="20" step="0.1" value="2.5">
+    </label>
+    <label class="row">Antecipar o corte (s)
+      <input type="number" id="preRoll" min="0" max="2" step="0.05" value="0.25">
+    </label>
+    <label class="row check"><input type="checkbox" id="wideOverlap" checked> Plano aberto quando falam juntos</label>
+    <label class="row indent">…se durar pelo menos (s)
+      <input type="number" id="overlapMin" min="0.3" max="10" step="0.1" value="1.5">
+    </label>
+    <h2 class="sub2">Tempo máximo no ar</h2>
+    <p class="hint">Quando uma câmera passa do máximo, o plugin procura uma pausa na fala e corta para outra câmera por alguns segundos. 0 = sem limite.</p>
+    <table id="tblMax">
+      <thead><tr><th>Câmera</th><th>Máx. (s)</th><th>Depois corta para</th><th>Por (s)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <details>
+      <summary>Avançado</summary>
+      <label class="row">Evidência para trocar de câmera (s)
+        <input type="number" id="switchSec" min="0.1" max="3" step="0.05" value="0.4">
+      </label>
+      <label class="row">Diferença p/ considerar fala simultânea (dB)
+        <input type="number" id="overlapDb" min="1" max="20" step="0.5" value="6">
+      </label>
+      <label class="row">Leitura da boca: quadros por segundo
+        <input type="number" id="mouthFps" min="4" max="30" step="1" value="10">
+      </label>
+      <label class="row">Leitura da boca: peso da sincronia boca-voz <small>0 = desligado</small>
+        <input type="number" id="syncWeight" min="0" max="1" step="0.05" value="0.7">
+      </label>
+      <label class="row">Leitura da boca: movimento mínimo
+        <input type="number" id="mouthMin" min="0.05" max="1" step="0.05" value="0.35">
+      </label>
+      <label class="row">Leitura da boca: semelhança p/ fala simultânea
+        <input type="number" id="mouthOverlap" min="0.3" max="1" step="0.05" value="0.6">
+      </label>
+      <label class="row">Caminho do ffmpeg
+        <input type="text" id="ffmpegPath" placeholder="detectar automaticamente">
+      </label>
+    </details>
+  </section>
+
+  <section id="secRun" class="hidden">
+    <button id="btnAnalyze" class="primary">2. Analisar áudio</button>
+    <div id="progress" class="muted"></div>
+    <canvas id="preview" width="360" height="90"></canvas>
+    <div id="legend"></div>
+    <div id="stats" class="muted"></div>
+  </section>
+
+  <section id="secApply" class="hidden">
+    <label class="row check"><input type="checkbox" id="clone" checked> Duplicar a sequência antes de cortar (recomendado)</label>
+    <label class="row check"><input type="checkbox" id="markDoubts" checked> Marcar trechos duvidosos (marcadores vermelhos)</label>
+    <button id="btnApply" class="primary">3. Aplicar cortes na timeline</button>
+    <div id="applyMsg"></div>
+  </section>
+
+  <div id="error" class="error hidden"></div>
+
+  
+<script>
+  // --- Node simulado (so o necessario para carregar analysis.js) ---
+  var module = { exports: {} };
+  var require = function (name) {
+    if (name === 'child_process') return { spawn: function () { throw new Error('sem spawn no teste'); } };
+    if (name === 'fs') return { existsSync: function () { return true; } };
+    if (name === 'os') return { homedir: function () { return '/Users/teste'; } };
+    if (name === 'path') return { join: function () { return Array.prototype.join.call(arguments, '/'); } };
+    if (/analysis\.js$/.test(name)) return window.__fakeAnalysis;
+    throw new Error('modulo desconhecido ' + name);
+  };
+</script>
+<script src="js/analysis.js"></script>
+<script>
+  (function () {
+    var real = module.exports, HOP = 0.05, DUR = 42, DEMO = true;
+    var talkA = [[1, 9], [16, 24], [27, 36]], talkB = [[9.3, 16], [20, 24], [36.2, 41]];
+    function on(r, t) { return r.some(function (x) { return t >= x[0] && t < x[1]; }); }
+    // silabas: o volume e a boca seguem o mesmo ritmo irregular
+    function syl(t, ph) { return 0.5 + 0.5 * Math.sin(2 * Math.PI * (3 + Math.abs(Math.sin(0.4 * t + ph))) * t + ph); }
+    function env(ranges, phases) {
+      var N = Math.ceil(DUR / HOP) + 1, a = new Float32Array(N);
+      for (var f = 0; f < N; f++) {
+        var t = f * HOP, p = Math.pow(10, (-60 + Math.random() * 3) / 10);
+        for (var k = 0; k < ranges.length; k++) {
+          if (on(ranges[k], t)) p += Math.pow(10, (-26 + 12 * syl(t, phases[k])) / 10);
+        }
+        a[f] = 10 * Math.log10(p);
+      }
+      return a;
+    }
+    function mouth(talk, ph, fps) {
+      var M = Math.ceil(DUR * fps) + 1, o = new Float32Array(M), j = new Float32Array(M), c = new Float32Array(M);
+      for (var i = 0; i < M; i++) {
+        var t = i / fps, m = on(talk, t) ? syl(t, ph) : 0.04 * Math.random();
+        o[i] = 0.09 + 0.3 * m; j[i] = 0.05 + 0.4 * m; c[i] = 1.4 + 0.08 * m;
+      }
+      return { open: o, jaw: j, chin: c };
+    }
+    var calls = window.__calls = [];
+    var fake = Object.assign({}, real, {
+      findFfmpeg: function () { return '/opt/homebrew/bin/ffmpeg'; },
+      buildEnvelopes: async function (ff, sps, dur, hop, prog) {
+        calls.push('env:' + sps[0].clips[0].name + ':' + sps[0].channel);
+        prog && prog(0, 1);
+        var n = sps[0].clips[0].name;
+        if (n === 'micA.wav') return [env([talkA], [0])];
+        if (n === 'micB.wav') return [env([talkB], [1.7])];
+        return [env([talkA, talkB], [0, 1.7])];
+      },
+      buildMouthTracks: async function (e, cams, dur, fps, prog) {
+        var n = cams[0].clips[0].name;
+        calls.push('mouth-start:' + n + ':' + fps + '@' + Date.now());
+        var steps = DEMO ? 12 : 1, wait = DEMO ? 140 : 150;
+        for (var s = 1; s <= steps; s++) {
+          await new Promise(function (r) { setTimeout(r, wait / steps * (DEMO ? 1 : 1)); });
+          prog && prog(0, s / steps);
+        }
+        calls.push('mouth-end:' + n + '@' + Date.now());
+        return [mouth(n === 'camA.mp4' ? talkA : talkB, n === 'camA.mp4' ? 0 : 1.7, fps)];
+      }
+    });
+    window.__fakeAnalysis = fake;
+
+    // --- Premiere simulado ---
+    function clip(name, s, e) { return { name: name, path: '/media/' + name, inPoint: 0, start: s, end: e }; }
+    var seq = { ok: true, name: 'Podcast', frameDur: 1 / 30, duration: DUR,
+      videoTracks: [
+        { index: 0, name: 'V1', clips: [clip('camA.mp4', 0, DUR)], firstClip: 'camA.mp4', locked: false },
+        { index: 1, name: 'V2', clips: [clip('camB.mp4', 0, DUR)], firstClip: 'camB.mp4', locked: false },
+        { index: 2, name: 'V3', clips: [clip('wide.mp4', 0, DUR)], firstClip: 'wide.mp4', locked: false }],
+      audioTracks: [] };
+    window.__setAudio = function (single) {
+      seq.audioTracks = single ? [{ index: 0, name: 'A1', clips: [clip('mix.wav', 0, DUR)] }]
+        : [{ index: 0, name: 'A1', clips: [clip('micA.wav', 0, DUR)] }, { index: 1, name: 'A2', clips: [clip('micB.wav', 0, DUR)] }];
+    };
+    window.__setAudio(true);
+    window.__adobe_cep__ = {
+      getSystemPath: function () { return 'file:///Users/teste/ext'; },
+      evalScript: function (code, cb) {
+        if (/^pc_getSequenceInfo/.test(code)) return setTimeout(function () { cb(JSON.stringify(seq)); });
+        var m = /^pc_applyCuts\((.*)\)$/.exec(code);
+        if (m) {
+          window.__payload = JSON.parse(JSON.parse(m[1]));
+          return setTimeout(function () { cb(JSON.stringify({ ok: true, sequence: 'Podcast - AutoCut', razors: 9, toggled: 8, markers: (window.__payload.markers || []).length })); });
+        }
+        cb('EvalScript error.');
+      }
+    };
+  })();
+</script>
+<script src="js/main.js"></script>
+<script>setTimeout(function () { document.getElementById("btnRead").click(); }, 150);</script>
+</body>
+</html>

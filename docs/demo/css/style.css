@@ -1,0 +1,55 @@
+:root {
+  --bg: #232323;
+  --panel: #2c2c2c;
+  --line: #3d3d3d;
+  --text: #d8d8d8;
+  --muted: #9a9a9a;
+  --accent: #2d8ceb;
+  --error: #ff6b6b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 10px 12px 24px;
+  background: var(--bg);
+  color: var(--text);
+  font: 12px/1.4 -apple-system, "Segoe UI", sans-serif;
+}
+header { margin-bottom: 10px; }
+h1 { font-size: 15px; margin: 0; }
+h2 { font-size: 12px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.sub, .muted, .hint { color: var(--muted); }
+.hint { margin: 0 0 6px; font-size: 11px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin-bottom: 10px; }
+.hidden { display: none !important; }
+button {
+  width: 100%; padding: 8px; border: 0; border-radius: 4px; cursor: pointer;
+  background: #444; color: #fff; font-size: 12px;
+}
+button.primary { background: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+input[type=number], input[type=text], select {
+  background: #1b1b1b; color: var(--text); border: 1px solid var(--line); border-radius: 3px; padding: 3px 4px; font-size: 12px;
+}
+input[type=number] { width: 64px; }
+input[type=text] { width: 100%; }
+input[type=range] { width: 100%; }
+label.row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin: 6px 0; }
+label.row.check { justify-content: flex-start; }
+label.row.indent { padding-left: 16px; color: var(--muted); }
+label.row small { color: var(--muted); }
+table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+th { text-align: left; font-weight: normal; color: var(--muted); font-size: 11px; padding: 2px; }
+td { padding: 2px; }
+td input[type=text] { width: 80px; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+canvas { width: 100%; height: 90px; margin-top: 8px; background: #1b1b1b; border-radius: 3px; display: block; }
+#legend { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 8px; }
+#stats, #progress, #applyMsg { margin-top: 6px; white-space: pre-line; }
+.error { color: var(--error); background: #3a2020; border: 1px solid #6a3030; border-radius: 6px; padding: 8px; white-space: pre-line; }
+.ok { color: #6fdc8c; }
+details summary { cursor: pointer; color: var(--muted); margin-top: 6px; }
+h2.sub2 { margin-top: 12px; }
+#tblMax input[type=number] { width: 52px; }
+#tblMax select { max-width: 120px; }
+#tblMax td:first-child { white-space: nowrap; }

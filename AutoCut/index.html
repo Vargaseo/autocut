@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>AutoCut</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>AutoCut</h1>
+    <span class="sub">Troca de câmera automática por quem fala</span>
+  </header>
+
+  <section>
+    <button id="btnRead" class="primary">1. Ler sequência ativa</button>
+    <div id="seqName" class="muted"></div>
+  </section>
+
+  <section id="secSpeakers" class="hidden">
+    <h2>Pessoas</h2>
+    <label class="row">Gravação
+      <select id="mode">
+        <option value="mouth">Um microfone só (leitura da boca)</option>
+        <option value="mics">Um microfone por pessoa</option>
+      </select>
+    </label>
+    <label class="row hidden" id="rowAudio">Áudio do podcast
+      <span><select id="selAudio"></select> <select id="selAudioCh">
+        <option value="mix">Mix</option><option value="L">Esq.</option><option value="R">Dir.</option>
+      </select></span>
+    </label>
+    <p class="hint" id="hintMode"></p>
+    <table id="tblSpeakers">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+    <label class="row">Câmera aberta (wide)
+      <select id="selWide"></select>
+    </label>
+  </section>
+
+  <section id="secSettings" class="hidden">
+    <h2>Ajustes</h2>
+    <label class="row">Sensibilidade <span id="vSens"></span>
+      <input type="range" id="sens" min="0" max="100" value="50">
+    </label>
+    <label class="row">Duração mínima do plano (s)
+      <input type="number" id="minShot" min="0.5" max="20" step="0.1" value="2.5">
+    </label>
+    <label class="row">Antecipar o corte (s)
+      <input type="number" id="preRoll" min="0" max="2" step="0.05" value="0.25">
+    </label>
+    <label class="row check"><input type="checkbox" id="wideOverlap" checked> Plano aberto quando falam juntos</label>
+    <label class="row indent">…se durar pelo menos (s)
+      <input type="number" id="overlapMin" min="0.3" max="10" step="0.1" value="1.5">
+    </label>
+    <h2 class="sub2">Tempo máximo no ar</h2>
+    <p class="hint">Quando uma câmera passa do máximo, o plugin procura uma pausa na fala e corta para outra câmera por alguns segundos. 0 = sem limite.</p>
+    <table id="tblMax">
+      <thead><tr><th>Câmera</th><th>Máx. (s)</th><th>Depois corta para</th><th>Por (s)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <details>
+      <summary>Avançado</summary>
+      <label class="row">Evidência para trocar de câmera (s)
+        <input type="number" id="switchSec" min="0.1" max="3" step="0.05" value="0.4">
+      </label>
+      <label class="row">Diferença p/ considerar fala simultânea (dB)
+        <input type="number" id="overlapDb" min="1" max="20" step="0.5" value="6">
+      </label>
+      <label class="row">Leitura da boca: quadros por segundo
+        <input type="number" id="mouthFps" min="4" max="30" step="1" value="10">
+      </label>
+      <label class="row">Leitura da boca: peso da sincronia boca-voz <small>0 = desligado</small>
+        <input type="number" id="syncWeight" min="0" max="1" step="0.05" value="0.7">
+      </label>
+      <label class="row">Leitura da boca: movimento mínimo
+        <input type="number" id="mouthMin" min="0.05" max="1" step="0.05" value="0.35">
+      </label>
+      <label class="row">Leitura da boca: semelhança p/ fala simultânea
+        <input type="number" id="mouthOverlap" min="0.3" max="1" step="0.05" value="0.6">
+      </label>
+      <label class="row">Caminho do ffmpeg
+        <input type="text" id="ffmpegPath" placeholder="detectar automaticamente">
+      </label>
+    </details>
+  </section>
+
+  <section id="secRun" class="hidden">
+    <button id="btnAnalyze" class="primary">2. Analisar áudio</button>
+    <div id="progress" class="muted"></div>
+    <canvas id="preview" width="360" height="90"></canvas>
+    <div id="legend"></div>
+    <div id="stats" class="muted"></div>
+  </section>
+
+  <section id="secApply" class="hidden">
+    <label class="row check"><input type="checkbox" id="clone" checked> Duplicar a sequência antes de cortar (recomendado)</label>
+    <label class="row check"><input type="checkbox" id="markDoubts" checked> Marcar trechos duvidosos (marcadores vermelhos)</label>
+    <button id="btnApply" class="primary">3. Aplicar cortes na timeline</button>
+    <div id="applyMsg"></div>
+  </section>
+
+  <div id="error" class="error hidden"></div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

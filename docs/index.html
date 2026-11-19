@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoCut</title>
+<meta name="description" content="Plugin para Adobe Premiere Pro que troca de câmera automaticamente conforme quem está falando no podcast.">
+<meta property="og:title" content="AutoCut">
+<meta property="og:description" content="Troca de câmera automática para podcast no Premiere Pro.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232d8ceb'/><rect x='7' y='10' width='8' height='12' rx='2' fill='%23fff'/><rect x='18' y='10' width='7' height='12' rx='2' fill='%23ff9f43'/></svg>">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #131417;
+    --panel: #1b1d22;
+    --panel-2: #212429;
+    --line: #2d313a;
+    --text: #e6e8ec;
+    --muted: #9aa1ad;
+    --accent: #2d8ceb;
+    --accent-soft: #1d3049;
+    --orange: #ff9f43;
+    --green: #4ade80;
+    --red: #ff6b6b;
+    --radius: 12px;
+    --gut: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 var(--gut); }
+  a { color: var(--accent); }
+  h1, h2, h3 { line-height: 1.25; margin: 0; letter-spacing: -0.015em; }
+  h2 { font-size: 1.45rem; margin-bottom: 8px; }
+  h3 { font-size: 1.02rem; margin-bottom: 4px; }
+  p { margin: 0 0 12px; }
+  section { padding: 44px 0; border-top: 1px solid var(--line); }
+  .lead { color: var(--muted); max-width: 62ch; }
+
+  /* ---------- topo ---------- */
+  header { padding: 56px 0 44px; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .brand svg { width: 30px; height: 30px; flex: none; }
+  .brand span { font-weight: 650; font-size: 1.06rem; }
+  h1 { font-size: clamp(2.1rem, 7vw, 3.3rem); font-weight: 680; }
+  h1 .hl { color: var(--accent); }
+  .tagline { font-size: clamp(1rem, 2.6vw, 1.2rem); color: var(--muted); max-width: 54ch; margin: 14px 0 0; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+  .btn {
+    display: inline-block; padding: 11px 20px; border-radius: 9px; font-weight: 600;
+    font-size: 0.95rem; text-decoration: none; border: 1px solid transparent;
+  }
+  .btn-main { background: var(--accent); color: #fff; }
+  .btn-ghost { border-color: var(--line); color: var(--text); background: var(--panel); }
+  /* ---------- faixa de cortes ---------- */
+  .strip { margin-top: 34px; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--panel); }
+  .strip svg { display: block; width: 100%; height: auto; }
+  .strip figcaption { color: var(--muted); font-size: 0.82rem; margin-top: 10px; }
+
+  /* ---------- grades ---------- */
+  .grid { display: grid; gap: 14px; margin-top: 22px; }
+  @media (min-width: 680px) { .grid.c2 { grid-template-columns: 1fr 1fr; } .grid.c3 { grid-template-columns: repeat(3, 1fr); } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .card p { color: var(--muted); font-size: 0.93rem; margin: 0; }
+  .card .tag { font-size: 0.74rem; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); font-weight: 650; display: block; margin-bottom: 7px; }
+  .card.pick { border-color: var(--accent); }
+
+  ul.clean { list-style: none; padding: 0; margin: 16px 0 0; }
+  ul.clean li { position: relative; padding-left: 24px; margin-bottom: 11px; color: var(--muted); font-size: 0.95rem; }
+  ul.clean li strong { color: var(--text); font-weight: 600; }
+  ul.clean li::before {
+    content: ""; position: absolute; left: 4px; top: 9px; width: 7px; height: 7px;
+    border-radius: 2px; background: var(--accent);
+  }
+
+  /* ---------- passos ---------- */
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 20px 0 0; }
+  ol.steps > li { counter-increment: s; position: relative; padding-left: 42px; margin-bottom: 24px; }
+  ol.steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: 0;
+    width: 27px; height: 27px; border-radius: 50%; background: var(--accent-soft);
+    color: #9cc8f5; border: 1px solid #2f4b6e;
+    display: grid; place-items: center; font-size: 0.85rem; font-weight: 650;
+  }
+  ol.steps h3 { margin-bottom: 3px; }
+  ol.steps p { color: var(--muted); font-size: 0.93rem; margin: 0 0 8px; }
+  pre {
+    background: #0e0f12; border: 1px solid var(--line); border-radius: 9px;
+    padding: 11px 13px; overflow-x: auto; margin: 0 0 8px;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86rem; }
+  pre code { color: #cfd6e0; }
+  p code, li code, td code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; font-size: 0.85em; }
+
+  /* ---------- tabela ---------- */
+  .tablewrap { overflow-x: auto; margin-top: 18px; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { border-collapse: collapse; width: 100%; min-width: 440px; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  th { background: var(--panel-2); font-weight: 600; font-size: 0.82rem; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 7px; vertical-align: middle; }
+
+  .note {
+    border-left: 3px solid var(--accent); background: var(--panel);
+    border-radius: 0 9px 9px 0; padding: 14px 16px; margin-top: 20px;
+  }
+  .note p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+  .note strong { color: var(--text); }
+
+  footer { border-top: 1px solid var(--line); padding: 34px 0 54px; color: var(--muted); font-size: 0.88rem; }
+  footer a { margin-right: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2d8ceb"/><rect x="7" y="10" width="8" height="12" rx="2" fill="#fff"/><rect x="18" y="10" width="7" height="12" rx="2" fill="#ff9f43"/></svg>
+      <span>AutoCut</span>
+    </div>
+    <h1>A câmera vai sozinha<br><span class="hl">para quem está falando.</span></h1>
+    <p class="tagline">
+      Painel para o Adobe Premiere Pro que escuta o podcast, descobre quem fala em cada momento
+      e corta a timeline para a câmera certa. Funciona até com um microfone só para todo mundo.
+    </p>
+    <div class="cta">
+      <a class="btn btn-main" href="demo/">Ver o painel funcionando</a>
+      <a class="btn btn-ghost" href="https://github.com/Vargaseo/autocut">Código no GitHub</a>
+    </div>
+
+    <figure class="strip">
+      <svg viewBox="0 0 860 118" role="img" aria-label="Linha do tempo: a câmera alterna entre as duas pessoas e o plano aberto, acompanhando quem fala.">
+        <g>
+          <rect x="0" y="0" width="212" height="34" rx="4" fill="#4f9dff"/>
+          <rect x="214" y="0" width="236" height="34" rx="4" fill="#ff9f43"/>
+          <rect x="452" y="0" width="92" height="34" rx="4" fill="#8a8f98"/>
+          <rect x="546" y="0" width="188" height="34" rx="4" fill="#4f9dff"/>
+          <rect x="736" y="0" width="124" height="34" rx="4" fill="#ff9f43"/>
+        </g>
+        <g fill="#4f9dff" opacity="0.92">
+          <rect x="8" y="56" width="196" height="18" rx="3"/>
+          <rect x="462" y="56" width="74" height="18" rx="3"/>
+          <rect x="556" y="56" width="170" height="18" rx="3"/>
+        </g>
+        <g fill="#ff9f43" opacity="0.92">
+          <rect x="222" y="84" width="220" height="18" rx="3"/>
+          <rect x="470" y="84" width="60" height="18" rx="3"/>
+          <rect x="744" y="84" width="108" height="18" rx="3"/>
+        </g>
+      </svg>
+      <figcaption>Em cima, a câmera que fica no ar. Embaixo, quem estava falando — é assim que a prévia aparece no painel.</figcaption>
+    </figure>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>O trabalho que ele tira de você</h2>
+    <p class="lead">Editar podcast de várias câmeras é quase todo repetição: ouvir, achar quem fala, cortar, repetir por uma hora de gravação.</p>
+    <div class="grid c3">
+      <div class="card">
+        <span class="tag">Corta</span>
+        <h3>Troca por quem fala</h3>
+        <p>Cada pessoa tem a sua câmera. O AutoCut corta para ela quando começa a falar — e antecipa um pouco o corte, como um editor faria.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Respira</span>
+        <h3>Usa o plano aberto</h3>
+        <p>Quando duas pessoas falam juntas, ou quando um close já está demorando, ele vai para a câmera aberta.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Avisa</span>
+        <h3>Marca o que está em dúvida</h3>
+        <p>Se alguém parece falar com a câmera em outra pessoa, ele deixa um marcador vermelho na sequência para você conferir só aquele ponto.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Dois jeitos de gravar</h2>
+    <p class="lead">Escolha no painel como o seu podcast foi gravado. O resto é igual nos dois.</p>
+    <div class="grid c2">
+      <div class="card pick">
+        <span class="tag">Modo padrão</span>
+        <h3>Um microfone só</h3>
+        <p>
+          Um áudio para todo mundo. O som diz <em>quando</em> alguém fala; o movimento da boca em cada
+          câmera diz <em>quem</em>. Ele mede lábios, mandíbula e queixo — e, principalmente, se esse
+          movimento está no <strong>ritmo das sílabas da voz</strong>. Quem só reage, sorri ou ri sem som
+          mexe a boca fora desse ritmo e não rouba a câmera.
+        </p>
+      </div>
+      <div class="card">
+        <span class="tag">Alternativo</span>
+        <h3>Um microfone por pessoa</h3>
+        <p>
+          Cada pessoa no seu próprio canal de áudio. Ele aprende quanto da voz de cada um
+          <strong>vaza nos outros microfones</strong> e desconta isso antes de decidir — então o
+          apresentador falando alto não leva a câmera quando o convidado é quem está falando.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Por que ele não fica preso numa pessoa</h2>
+    <p class="lead">O erro mais chato nesse tipo de corte automático é a câmera grudar no apresentador enquanto o convidado fala. O AutoCut foi feito em volta disso.</p>
+    <ul class="clean">
+      <li><strong>Decide a conversa inteira de uma vez.</strong> Em vez de olhar instante a instante e, na dúvida, manter a câmera anterior, ele escolhe a sequência de cortes que melhor explica a conversa toda, com um custo para cada troca.</li>
+      <li><strong>Falas curtas vão para quem tem mais evidência</strong>, e não automaticamente para quem já estava no ar.</li>
+      <li><strong>Um “aham” seguido de silêncio não vira plano.</strong> Ele conta o tempo de fala real dentro do trecho, não só a duração.</li>
+      <li><strong>O que ficou duvidoso ele entrega marcado</strong>, em vez de esconder o erro no meio de uma hora de vídeo.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Tempo máximo no ar</h2>
+    <p class="lead">Uma tabela no painel, uma linha por câmera. Quando uma câmera passa do tempo, o AutoCut procura uma pausa na fala e corta para outra por alguns segundos.</p>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Câmera</th><th>Máx.</th><th>Depois corta para</th><th>Por</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="dot" style="background:#4f9dff"></span>V1 · Apresentador</td><td>20 s</td><td>Automático (aberto)</td><td>2 s</td></tr>
+          <tr><td><span class="dot" style="background:#ff9f43"></span>V2 · Convidado</td><td>25 s</td><td>V1 · Apresentador</td><td>1,5 s</td></tr>
+          <tr><td><span class="dot" style="background:#8a8f98"></span>V3 · Aberto</td><td>6 s</td><td>Quem estiver falando</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <p><strong>Cortar para a outra pessoa</strong> é o jeito de inserir aquela reação de quem escuta no meio de um monólogo longo. <code>0</code> deixa a câmera sem limite.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Instalar</h2>
+    <p class="lead">macOS, Premiere Pro 2022 ou mais novo. Precisa do <a href="https://ffmpeg.org/">ffmpeg</a> — e, para o modo de um microfone só, de um Python isolado com o MediaPipe (cerca de 300 MB, instalado numa pasta própria).</p>
+    <ol class="steps">
+      <li>
+        <h3>Baixe o projeto</h3>
+        <pre><code>git clone https://github.com/Vargaseo/autocut.git
+cd autocut</code></pre>
+      </li>
+      <li>
+        <h3>Instale o painel</h3>
+        <p>Copia o painel para a pasta de extensões do Premiere e libera painéis sem assinatura da Adobe.</p>
+        <pre><code>bash install.sh</code></pre>
+      </li>
+      <li>
+        <h3>Prepare a leitura da boca</h3>
+        <p>Só para o modo de um microfone só. Cria o Python isolado e baixa o modelo de rosto.</p>
+        <pre><code>bash setup_lipsync.sh</code></pre>
+      </li>
+      <li>
+        <h3>Abra no Premiere</h3>
+        <p>Feche e abra o Premiere, depois vá em <strong>Janela › Extensões (legado) › AutoCut</strong>.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Como usar</h2>
+    <ol class="steps">
+      <li>
+        <h3>Ler a sequência</h3>
+        <p>O painel lista as faixas. Você confere a câmera de cada pessoa e qual é a câmera aberta.</p>
+      </li>
+      <li>
+        <h3>Analisar</h3>
+        <p>Ele lê os arquivos e mostra a prévia colorida dos planos. Daí em diante, mexer nos ajustes atualiza a prévia na hora, sem reanalisar.</p>
+      </li>
+      <li>
+        <h3>Aplicar os cortes</h3>
+        <p>Ele duplica a sequência e corta na cópia. As câmeras fora do ar ficam <strong>desativadas, não apagadas</strong> — para mudar um corte à mão, é só ativar ou desativar o clipe com <code>Shift+E</code>.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>O que ele ainda não faz</h2>
+    <ul class="clean">
+      <li><strong>Não lê clipes aninhados (nested) nem mesclados.</strong> Use os arquivos originais nas faixas.</li>
+      <li><strong>Não lê rosto de perfil, de costas ou com a boca coberta.</strong> Se o rosto some por muito tempo, o painel avisa.</li>
+      <li><strong>Não suporta áudio com velocidade alterada</strong>, e as faixas de vídeo precisam estar destravadas.</li>
+      <li><strong>Não tem assinatura digital da Adobe.</strong> O instalador liga o modo do Premiere que aceita painéis sem assinatura.</li>
+      <li><strong>Testado só no macOS.</strong> O painel é feito em tecnologia que roda nos dois sistemas, mas ninguém rodou no Windows ainda.</li>
+    </ul>
+    <div class="note">
+      <p><strong>Em desenvolvimento.</strong> A lógica de decisão é verificada por testes automáticos, mas com áudio e vídeo simulados — ainda não foi medida em gravações reais. Trate os primeiros cortes como um rascunho e confira os marcadores vermelhos.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a href="https://github.com/Vargaseo/autocut">GitHub</a>
+    <a href="demo/">Demonstração</a>
+    <a href="https://github.com/Vargaseo/autocut/issues">Relatar um problema</a>
+    <p style="margin-top:14px">AutoCut · painel para Adobe Premiere Pro. Não é um produto da Adobe.</p>
+  </div>
+</footer>
+
+</body>
+</html>

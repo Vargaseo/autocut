@@ -1,0 +1,6 @@
+.DS_Store
+node_modules/
+.claude/settings.local.json
+
+# gerado por test/make_harness.js (nao e instalado no Premiere)
+AutoCut/_harness.html
