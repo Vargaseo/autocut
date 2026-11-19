@@ -55,6 +55,15 @@ Ajustes avançados do modo:
 - **Peso da sincronia boca-voz:** 0,7 por padrão. Abaixe se o vídeo estiver fora de sincronia com o áudio; 0 desliga.
 - **Semelhança p/ fala simultânea:** quão parecido o movimento de duas bocas precisa ser para virar plano aberto.
 
+**Plano aberto:** o rosto é **procurado e depois acompanhado**, em vez de o quadro inteiro ser
+entregue ao detector. Isso importa muito: o MediaPipe reduz a imagem recebida a uma miniatura
+antes de procurar, então num plano aberto de podcast o rosto vira poucas dezenas de pixels e
+não é encontrado — e aumentar a resolução não resolve, porque o que conta é a proporção
+rosto/quadro. Medido num quadro real (1076×596, rosto a 46°): quadro inteiro não achava em
+resolução nenhuma; recortando o rosto, achava sempre. O leitor varre o quadro em pedaços
+sobrepostos até achar e daí em diante só processa um recorte em volta do rosto — o que também
+ficou mais rápido (~11 ms por quadro).
+
 **Pessoa de perfil:** funciona. As medidas são tomadas no eixo do próprio rosto (nasion → nariz
 → lábios → queixo), que são pontos da linha do meio. Virar a cabeça encolhe as distâncias
 horizontais, não as verticais — por isso a largura da boca e a distância entre os olhos saíram

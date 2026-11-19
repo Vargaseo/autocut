@@ -10,6 +10,14 @@ Saida (stdout): JSON {"fps": F, "open": [..], "jaw": [..], "chin": [..], "artic"
   artic: mistura de blendshapes da boca (abrir, arredondar, esticar) - articulacao
   yaw:   giro horizontal da cabeca em graus (0 = de frente, 90 = perfil)
 
+Por que o rosto e PROCURADO e depois ACOMPANHADO, em vez de olhar o quadro inteiro:
+  o detector do MediaPipe reduz a imagem recebida a uma miniatura antes de procurar. Num
+  plano aberto de podcast o rosto vira umas poucas dezenas de pixels nessa miniatura e nao e
+  encontrado - nem aumentando a resolucao, porque o que importa e a proporcao rosto/quadro.
+  Medido num quadro real (1076x596, rosto a 46 graus): quadro inteiro = nao acha, em nenhuma
+  resolucao; recorte do rosto = acha sempre. Entao: varre o quadro em pedacos ate achar, e
+  dai em diante so processa um recorte em volta do rosto, que ainda por cima e mais rapido.
+
 Por que nao se mede mais pela largura da boca / distancia entre os olhos:
   essas sao distancias HORIZONTAIS e encolhem com o cosseno do giro da cabeca. Com a boca
   parada, so girando a cabeca ate o perfil, aquelas razoes infl am mais de 10x - a pessoa de
@@ -126,6 +134,85 @@ def face_size(lms):
     return (max(xs) - min(xs)) * (max(ys) - min(ys))
 
 
+def _best(res):
+    """Escolhe o rosto maior e devolve (landmarks, matriz, blendshapes, caixa 0..1)."""
+    if not res.face_landmarks:
+        return None
+    bi = max(range(len(res.face_landmarks)), key=lambda k: face_size(res.face_landmarks[k]))
+    lms = res.face_landmarks[bi]
+    mats = getattr(res, "facial_transformation_matrixes", None)
+    mat = mats[bi] if mats and bi < len(mats) else None
+    shp = res.face_blendshapes[bi] if res.face_blendshapes and bi < len(res.face_blendshapes) else None
+    xs = [p.x for p in lms]
+    ys = [p.y for p in lms]
+    return lms, mat, shp, (min(xs), min(ys), max(xs), max(ys))
+
+
+def _crop(img, roi):
+    x, y, side = roi
+    return np.ascontiguousarray(img[y:y + side, x:x + side])
+
+
+def detect_in(lm, img, roi):
+    """Procura o rosto dentro do recorte atual."""
+    sub = _crop(img, roi)
+    if sub.shape[0] < 16 or sub.shape[1] < 16:
+        return None
+    res = lm.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=sub))
+    return _best(res)
+
+
+def scan(lm, img, W, H):
+    """Varre o quadro em pedacos sobrepostos ate achar um rosto.
+
+    Devolve (roi, achado) ou None. Grades do mais grosso ao mais fino: o rosto precisa ocupar
+    uma boa fracao do pedaco para o detector enxergar.
+    """
+    for cols, rows in ((2, 2), (3, 2), (4, 3)):
+        tw, th = W // cols, H // rows
+        if tw < 64 or th < 64:
+            continue
+        for y in range(0, max(1, H - th + 1), max(1, th // 2)):
+            for x in range(0, max(1, W - tw + 1), max(1, tw // 2)):
+                sub = np.ascontiguousarray(img[y:y + th, x:x + tw])
+                got = _best(lm.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=sub)))
+                if got is None:
+                    continue
+                bx0, by0, bx1, by1 = got[3]
+                box = (x + bx0 * tw, y + by0 * th, x + bx1 * tw, y + by1 * th)
+                roi = smooth_roi(None, None, W, H, box_px=box)
+                # So vale o que for confirmado DENTRO do recorte quadrado definitivo: as medidas
+                # dependem da escala do recorte, e a caixa achada no pedaco nao serve para isso.
+                again = detect_in(lm, img, roi)
+                if again is not None:
+                    return roi, again
+                return roi, None
+    return None
+
+
+def smooth_roi(prev, box, W, H, box_px=None, margin=1.9, inertia=0.6):
+    """Recorte quadrado em volta do rosto, movendo-se devagar para nao tremer."""
+    if box_px is None:
+        if prev is None or box is None:
+            return prev
+        x, y, side = prev
+        box_px = (x + box[0] * side, y + box[1] * side, x + box[2] * side, y + box[3] * side)
+    cx = (box_px[0] + box_px[2]) / 2.0
+    cy = (box_px[1] + box_px[3]) / 2.0
+    side = max(box_px[2] - box_px[0], box_px[3] - box_px[1]) * margin
+    side = max(64.0, min(side, float(min(W, H))))
+    if prev is not None:
+        px, py, ps = prev
+        pcx, pcy = px + ps / 2.0, py + ps / 2.0
+        cx = inertia * pcx + (1 - inertia) * cx
+        cy = inertia * pcy + (1 - inertia) * cy
+        side = inertia * ps + (1 - inertia) * side
+    side = int(round(min(side, min(W, H))))
+    x = int(round(min(max(0, cx - side / 2.0), W - side)))
+    y = int(round(min(max(0, cy - side / 2.0), H - side)))
+    return (x, y, side)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--file", required=True)
@@ -134,7 +221,7 @@ def main():
     ap.add_argument("--start", type=float, default=0.0)
     ap.add_argument("--dur", type=float, required=True)
     ap.add_argument("--fps", type=float, default=10.0)
-    ap.add_argument("--width", type=int, default=480)
+    ap.add_argument("--width", type=int, default=960)
     a = ap.parse_args()
 
     ffprobe = os.path.join(os.path.dirname(a.ffmpeg), "ffprobe") if os.path.dirname(a.ffmpeg) else "ffprobe"
@@ -161,16 +248,17 @@ def main():
     # do que aceitar uma deteccao mais fraca (o yaw informa o quanto confiar).
     opts = mp.tasks.vision.FaceLandmarkerOptions(
         base_options=mp.tasks.BaseOptions(model_asset_path=a.model),
-        running_mode=mp.tasks.vision.RunningMode.VIDEO,
+        running_mode=mp.tasks.vision.RunningMode.IMAGE,
         num_faces=2,
         min_face_detection_confidence=0.25,
         min_face_presence_confidence=0.25,
-        min_tracking_confidence=0.25,
         output_face_blendshapes=True,
         output_facial_transformation_matrixes=True)
 
     opens, jaws, chins, artics, yaws = [], [], [], [], []
     last_p = -1.0
+    roi = None           # (x, y, lado) do recorte em volta do rosto
+    miss = 0             # quadros seguidos sem achar
     with mp.tasks.vision.FaceLandmarker.create_from_options(opts) as lm:
         i = 0
         while True:
@@ -178,19 +266,31 @@ def main():
             if not buf or len(buf) < frame_bytes:
                 break
             img = np.frombuffer(buf, dtype=np.uint8).reshape((H, W, 3))
-            res = lm.detect_for_video(mp.Image(image_format=mp.ImageFormat.SRGB, data=img),
-                                      int(round(i * 1000.0 / a.fps)))
-            o = c = j = ar = NO_FACE
-            yw = NO_YAW
-            if res.face_landmarks:
-                # rosto maior = pessoa daquela camera
-                bi = max(range(len(res.face_landmarks)), key=lambda k: face_size(res.face_landmarks[k]))
-                o, c = axis_measures(res.face_landmarks[bi], aspect)
-                if res.face_blendshapes and bi < len(res.face_blendshapes):
-                    j, ar = blendshapes(res.face_blendshapes[bi])
-                mats = getattr(res, "facial_transformation_matrixes", None)
-                if mats and bi < len(mats):
-                    yw = head_yaw(mats[bi])
+
+            found = None
+            if roi is not None:
+                found = detect_in(lm, img, roi)
+                if found is None:
+                    miss += 1
+            if found is None:
+                # procura de novo: no comeco a cada quadro, depois mais espacado
+                if roi is None or miss <= 3 or miss % 4 == 0:
+                    hit = scan(lm, img, W, H)
+                    if hit is not None:
+                        roi, found = hit      # found pode vir None: mede no proximo quadro
+            if found is not None:
+                miss = 0
+                lms, mats, shapes, box = found
+                roi = smooth_roi(roi, box, W, H)
+                o, c = axis_measures(lms, 1.0)   # recorte quadrado
+                j, ar = blendshapes(shapes)
+                yw = head_yaw(mats) if mats is not None else NO_YAW
+            else:
+                o = c = j = ar = NO_FACE
+                yw = NO_YAW
+                if miss > 25:      # perdeu de vez: volta a varrer o quadro todo
+                    roi = None
+
             opens.append(round(o, 5))
             chins.append(round(c, 5))
             jaws.append(round(j, 5))
