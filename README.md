@@ -195,6 +195,22 @@ repositório nem é instalado**. Se precisar dele em desenvolvimento, crie-o na 
 Para a maior parte dos ajustes de interface, porém, a banca de testes no navegador
 (`node test/make_harness.js`) já resolve, sem abrir porta nenhuma.
 
+## O que foi medido em vídeo real
+
+Um trecho de 7 s, 1920×1080, plano aberto de adega, pessoa de perfil entre 26° e 54°:
+
+| | resultado |
+|---|---|
+| Detecção do rosto, antes de procurar por partes | **0%** (em 480px, 1076px, espelhado, com contraste) |
+| Detecção do rosto, procurando e acompanhando | **100%** (110 de 110 quadros) |
+| Velocidade | ~11 ms por quadro (~7 min por câmera por hora de podcast) |
+
+**Ainda não validado:** a sincronia boca-voz. O trecho tinha uma pessoa só falando quase o
+tempo todo (maior silêncio contínuo: 0,85 s), então não há o contraste que a medida existe
+para resolver — alguém calado enquanto outro fala. Um teste de controle (comparar o alinhamento
+certo com o áudio deslocado) ficou inconclusivo pelo mesmo motivo. Para validar isso é preciso
+um trecho com as duas câmeras e um pedaço em que a pessoa escuta em silêncio.
+
 ## Traduções
 
 Todos os textos do painel ficam em `AutoCut/js/i18n.js`, um objeto por idioma com as mesmas
