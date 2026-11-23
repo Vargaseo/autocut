@@ -1,5 +1,5 @@
 // Gera o painel real rodando com o Premiere e o Node simulados:
-//   AutoCut/_harness.html  -> para testar a interface (nao e instalado)
+//   AutoCut/_harness.html  -> para testar a interface (o install.sh nao o instala)
 //   docs/demo/             -> a demonstracao publicada no site
 'use strict';
 const fs = require('fs');

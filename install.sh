@@ -7,8 +7,10 @@ DEST="$HOME/Library/Application Support/Adobe/CEP/extensions/com.autocut.panel"
 mkdir -p "$(dirname "$DEST")"
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
-# nunca instala o arquivo de depuração (abriria uma porta de debug no Premiere)
-rm -f "$DEST/.debug"
+# arquivos de desenvolvimento nunca vao para o painel instalado:
+#   .debug         abriria uma porta de depuracao no Premiere
+#   _harness.html  e a banca de testes, com o Premiere simulado
+rm -f "$DEST/.debug" "$DEST/_harness.html"
 
 # Painel sem assinatura digital: o Premiere so carrega com este modo ligado.
 defaults write com.adobe.CSXS.12 PlayerDebugMode 1
